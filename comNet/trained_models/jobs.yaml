@@ -1,0 +1,5 @@
+inference: []
+training:
+- cfg: single_instance.json
+  run_path: models/test240912_184125.single_instance
+  train_labels: 240911_com_net.slp

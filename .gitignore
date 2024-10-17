@@ -1,0 +1,13 @@
+*.h5
+*.exe
+*.pyc
+*.iml
+.idea/supervisely_dpk_training.iml
+.idea/misc.xml
+.training_files/Label3D
+
+__pycache__
+*.aux
+*.log
+
+.ipynb_checkpoints/

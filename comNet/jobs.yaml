@@ -1,0 +1,12 @@
+inference:
+- data_path: 240911_com_net.slp
+  models:
+  - models/test240912_183327.single_instance
+  only_suggested_frames: false
+  output_path: 240911_com_net.slp.predictions.slp
+  tracking: {}
+  type: video
+training:
+- cfg: single_instance.json
+  run_path: models/test240912_183327.single_instance
+  train_labels: 240911_com_net.slp

@@ -1,0 +1,130 @@
+%% Load in Diego Aldorondo's labeling GUI and label the key points:
+% lightly modified from SC's script:
+% RigControl/Camera Alignments/arena_coordinate_transform_2.m
+clear all
+close all;
+
+%% Set file paths
+% update the file paths and cam_array_file as needed
+codePath = 'C:\Users\ilow1\Documents\code\Label3D';
+addpath(genpath(codePath))
+
+%% Define chickadee training video files
+folderName  = 'Z:\Sherry\acquisition\SLV123_100424\';
+calib.trainingVideoFiles = { ...
+ [folderName 'blue_cam.avi'], ...
+ [folderName 'green_cam.avi'], ...
+ [folderName 'red_cam.avi'], ...
+ [folderName 'yellow_cam.avi'] };
+% Import chickadee body skeletons
+calib.trainingPointSkeleton = 'D:\GitHub\spike-analysis\bird_pose_tracking\postureNet\posture_skeleton_IL.csv';
+
+tracking_root = 'C:\Users\ilow1\Documents\code\bird_pose_tracking\';
+%alignPath = [tracking_root, 'calibration_files\all_opt_arrays'];
+cam_array_file = 'Z:\Sherry\camera_calibration\240911_aligned_opt_cam_array_XL.mat'; % this is a correct file that I've double checked
+
+skeleton_path = ['C:\Users\xl313\OneDrive\Documents\GitHub\bird_pose_tracking\postureNet'];
+skeleton_file = 'posture_skeleton_IL.csv';
+
+% define the video file
+bird_id = 'SLV123';
+session_date = '100424';
+vidRoot = ['Z:\Sherry\acquisition\', bird_id, '\'];
+
+bird_id = 'AMB155';
+session_date = '100424_01';
+vidRoot = ['Z:\Sherry\acquisition\', bird_id, '\'];
+vidFolder = [bird_id, '_', session_date];
+vidPath = fullfile(vidRoot, vidFolder);
+
+% ensure that the Label3D file autosaves in the right place
+save_dir = [tracking_root, 'training_files\Label3D\'];
+cd 'C:\Users\ilow1\Documents\code\bird_pose_tracking\training_files\Label3D\'
+
+%% Read in the video for each camera
+% data params
+camNames = {'red_cam', 'yellow_cam', 'green_cam', 'blue_cam'};
+nFrames = 5; % 100 for AMB104
+maxFrames = 50*60*180; % Hz * seconds * minutes
+nCams = length(camNames);
+frame_idx = round(linspace(5*60*50, maxFrames, nFrames)); % for uniform spacing
+
+% read in and reformat camera array
+load(fullfile(alignPath, cam_array_file))
+allParams = cell(nCams, 1);
+for cam_idx = 1:nCams
+    f = optCamArray(cam_idx, 7);
+    tmp = struct;
+    prinpoint = optCamArray(cam_idx,10:11);
+    tmp.K = cat(1,[f, 0, 0], [0, f, 0], [prinpoint, 1]);
+    tmp.RDistort = optCamArray(cam_idx,8:9);
+    tmp.TDistort = [0, 0];
+    tmp.r = rotationVectorToMatrix(optCamArray(cam_idx,1:3));
+    tmp.t = optCamArray(cam_idx,4:6);
+    allParams{cam_idx} = tmp;
+end
+
+% read in images
+videos = cell(nCams,1);
+for cam_idx = 1:nCams
+    disp(camNames(cam_idx))
+    fn = fullfile(vidPath, [camNames{cam_idx}, '.avi']);
+%     reader = VideoReader(fn);
+    reader = VideoReaderFFMPEG(fn, 'FFMPEGPATH', ffmpegPath);
+    frame_rate = reader.FrameRate;
+    vid = zeros(reader.Height, reader.Width, 1, nFrames, 'uint8');
+    for f = 1:nFrames
+        f_idx = frame_idx(f);
+        frameRGB = reader.read(round(f_idx));
+        vid(:,:,:,f) = frameRGB(:,:,1);
+    end
+    videos{cam_idx} = vid;
+end
+
+
+%% Define the skeleton
+% load the csv file
+opts = detectImportOptions(fullfile(skeleton_path, skeleton_file));
+opts.SelectedVariableNames = [1:3];
+skeleton_info = readmatrix(fullfile(skeleton_path, skeleton_file), opts);
+
+% define the nodes and edges
+skeleton.joint_names = transpose(skeleton_info(:,1));
+n_keypoints = length(skeleton.joint_names);
+all_parents = [];
+joint_idx = [];
+for node_idx = 1:n_keypoints
+    parent = skeleton_info{node_idx, 2};
+    if ~isempty(parent)
+        match_mask = strcmp(skeleton_info(:, 1), parent);
+        parent_idx = find(match_mask);
+        if isempty(joint_idx)
+        joint_idx = [node_idx, parent_idx];
+        else
+            joint_idx = cat(1, joint_idx, [node_idx, parent_idx]);
+        end
+    end
+end
+skeleton.joints_idx = repmat(joint_idx, 2, 1);
+skeleton.color = lines(length(skeleton.joints_idx));
+
+%% Start the GUI
+labelGui = Label3D(allParams, videos, skeleton, 'defScale', .12);
+colormap(labelGui.h{1}.Parent, 'gray'),
+
+%% To save the training file
+% the auto save doesn't include the video files...
+labelGui.saveAll()
+
+%% save the frame idx
+points_3d = labelGui.points3D;
+labeled_frame_idx = zeros(1, nFrames);
+for f = 1:nFrames
+    labeled_frame_idx(f) = ~isnan(points_3d(1, 1, f));
+end
+writeNPY(frame_idx(logical(labeled_frame_idx)), fullfile(save_dir, save_frames_file));
+
+%% To load an existing training file
+training_file = '20240903_190826_Label3D.mat';
+labelGui = Label3D(fullfile(save_dir, training_file), videos, 'defScale', .12);
+colormap(labelGui.h{1}.Parent, 'gray'),
