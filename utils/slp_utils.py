@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 import csv
 import cv2
@@ -8,13 +9,16 @@ from sleap import load_model as slp_load
 from sleap.instance import Point
 from sleap.skeleton import Node
 import scipy.io
+import matplotlib.pyplot as plt
+import os
+#%%
 
 
 import sys
 sys.path.append(".//camera_calibration/")
 sys.path.append("..//camera_calibration/")
 sys.path.append("c:\\Users\\xl313\\OneDrive\\Documents\\GitHub\\poseTrackingXL")
-from pySBA import unconvertParams, PySBA, DAParams
+from pySBA import unconvertParams, PySBA
 sys.path.append(".//utils/")
 sys.path.append("..//utils/")
 from triangulation_utils import unDistortPoints, camera_matrix, triangulate_confThresh_lowestErr
@@ -117,34 +121,55 @@ def resize_and_pad_rows(img, ds_size):
         ds_img = np.concatenate((ds_img,fill_row), axis=0)
     return ds_img
 
-def crop_from_com(img, centroid, half_width, crop_size = (500,500)):
+# def crop_from_com(img, centroid, half_width, crop_size = (500,500)):
+#     '''
+#     Crops an image around a given centroid (crop dims defined by half_width)
+#     and resizes to the specified crop_size.
+#     '''
+#     ctr = np.round(centroid).astype(int)
+#     half_width = np.round(half_width).astype(int)
+#     img_h,img_w = img.shape[0],img.shape[1]
+#     xmin = np.min([np.max([ctr[0] - half_width, 0]), img_w - 100])
+#     xmax = np.max([np.min([ctr[0] + half_width + 100, img_w]), 100])
+#     ymin = np.min([np.max([ctr[1] - half_width, 0]), img_h - 100])
+#     ymax = np.max([np.min([ctr[1] + half_width + 100, img_h]), 100])
+#
+#     # crop_img = cv2.resize(img[ymin:ymax, xmin:xmax], crop_size, cv2.INTER_AREA)
+#     # ctr = np.round(body_ctr).astype(int)
+#     # half_width = np.round(half_width).astype(int)
+#     # img_h,img_w = img.shape[0],img.shape[1]
+#     # xmin = np.min([np.max([ctr[0] - half_width - 100, 0]), img_w - 100])
+#     # xmax = np.max([np.min([ctr[0] + half_width + 100, img_w]), 100])
+#     # ymin = np.min([np.max([ctr[1] - half_width -100, 0]), img_h - 100])
+#     # ymax = np.max([np.min([ctr[1] + half_width + 100, img_h]), 100])
+# #crop_img = cv2.resize(images[4][0:419,387:1007], crop_size, cv2.INTER_AREA)
+#     crop_img = cv2.resize(img[ymin:ymax, xmin:xmax], crop_size, cv2.INTER_AREA)
+#     #crop_img = cv2.resize(img[0:419,387:1007], crop_size, cv2.INTER_AREA)
+#     min_ind = np.array([xmin, ymin])
+#     max_ind = np.array([xmax, ymax])
+#     crop_scale = crop_size / (max_ind - min_ind)
+#
+#     return crop_img, min_ind, crop_scale
+
+def crop_from_com(img, centroid, half_width, crop_size=(500, 500)): # used to be 320, 320
     '''
     Crops an image around a given centroid (crop dims defined by half_width)
     and resizes to the specified crop_size.
     '''
     ctr = np.round(centroid).astype(int)
     half_width = np.round(half_width).astype(int)
-    img_h,img_w = img.shape[0],img.shape[1]
-    xmin = np.min([np.max([ctr[0] - half_width, 0]), img_w - 100])
-    xmax = np.max([np.min([ctr[0] + half_width + 100, img_w]), 100])
-    ymin = np.min([np.max([ctr[1] - half_width, 0]), img_h - 100])
-    ymax = np.max([np.min([ctr[1] + half_width + 100, img_h]), 100])
-    
-    # crop_img = cv2.resize(img[ymin:ymax, xmin:xmax], crop_size, cv2.INTER_AREA) 
-    # ctr = np.round(body_ctr).astype(int)
-    # half_width = np.round(half_width).astype(int)
-    # img_h,img_w = img.shape[0],img.shape[1]
-    # xmin = np.min([np.max([ctr[0] - half_width - 100, 0]), img_w - 100])
-    # xmax = np.max([np.min([ctr[0] + half_width + 100, img_w]), 100])
-    # ymin = np.min([np.max([ctr[1] - half_width -100, 0]), img_h - 100])
-    # ymax = np.max([np.min([ctr[1] + half_width + 100, img_h]), 100])
-#crop_img = cv2.resize(images[4][0:419,387:1007], crop_size, cv2.INTER_AREA)
-    crop_img = cv2.resize(img[ymin:ymax, xmin:xmax], crop_size, cv2.INTER_AREA) 
-    #crop_img = cv2.resize(img[0:419,387:1007], crop_size, cv2.INTER_AREA)
+    img_h,img_w = img.shape[0],img.shape[1] # used to be img_h, img_w = img.shape
+
+    xmin = np.min([np.max([ctr[0] - half_width, 0]), img_w - 1]) # not really understand why -1/+1
+    xmax = np.max([np.min([ctr[0] + half_width + 1, img_w]), 1])
+    ymin = np.min([np.max([ctr[1] - half_width, 0]), img_h - 1])
+    ymax = np.max([np.min([ctr[1] + half_width + 1, img_h]), 1])
+
+    crop_img = cv2.resize(img[ymin:ymax, xmin:xmax], crop_size, cv2.INTER_AREA)
     min_ind = np.array([xmin, ymin])
     max_ind = np.array([xmax, ymax])
     crop_scale = crop_size / (max_ind - min_ind)
-    
+
     return crop_img, min_ind, crop_scale
 
 
@@ -174,19 +199,7 @@ class posture_tracker:
         self.face_w3d = face_w3d
         self.com_head_ind = com_head_ind
         self.face_crop_size = face_crop_size
-    
-    ############
-    def DAParams(camParam): # XL created this to substitute the optCamArray form from pySBA with DA's matlab struct form
-        K = np.array(camParam['K']) #camParams {1,1}, which is the first cam, will be [0,0] in python 
-        r = np.array(camParam['r'])
-        t = np.array(camParam['t'])
-        d = np.array(camParam['RDistort'])
-        # Clean up each array
-        K = K[0,0]
-        r = r[0,0]
-        t = t[0,0]
-        d = d[0,0]
-        return {'K': K, 'R':r, 't':t, 'd':d}
+
 
     def crop_bird(crop_img, COM,
                     this_w3d=80,
@@ -222,38 +235,42 @@ class posture_tracker:
 
         return crop_img, min_ind, crop_scale
 
-    def track_video_com(self, start_frame=0, nFrames=1000):
+    def track_video_com(self, base_dir, start_frame=0, nFrames=1000):
         '''
         pared down inference script for just getting the COM model predictions
         '''
         ''' load the models '''
-        # peak_threshold controls how low confidence peaks are reported
-        # setting this param to 0 forces the model to guess, rather than outputting NaNs
         com_mdl = slp_load([self.com_model], peak_threshold=0)
+        #posture_mdl = slp_load([self.posture_model], peak_threshold=0)
+        #face_mdl = self.face_model
 
         ''' Collect camera parameters '''
         print('Collecting Camera Parameters')
         cameraDicts = []
         cameraMats = []
-        for nCam in range(self.nCams):
+        for nCam in range(self.nCams):  # range would be 0,1,2,3
             theseParams = unconvertParams(self.camParams[nCam])
-            #theseParams = DAParams(self.camParams[nCam,0])
             cameraDicts.append(theseParams)
-            cameraMats.append(camera_matrix(theseParams['K'], theseParams['R'], theseParams['t'].reshape((1,3))))
+            cameraMats.append(camera_matrix(theseParams['K'], theseParams['R'], theseParams['t'].reshape((1, 3))))
+        print("cameraMats: ", cameraMats)
         sba = PySBA(self.camParams, np.NaN, np.NaN, np.NaN, np.NaN)
 
         ''' Read in video and predict keypoints '''
         print('Reading and Predicting')
 
         # preallocate results lists (all frames)
-        raw_pred = []
         comPred = []
         comReproj = []
         comConf = []
 
         # preallocate image arrays
-        ds_img = np.full((self.nCams, self.ds_size[1], self.ds_size[0], 1), 0, dtype='uint8')
-        
+        ds_img = np.full((self.nCams, self.ds_size[1], self.ds_size[0], 3), 0,
+                         dtype='uint8')  # SHERRY: the last dimension used to be 1, needs to make it 3
+        crop_img = np.full((self.nCams, self.crop_size[1], self.crop_size[0], 3), 0,
+                           dtype='uint8')  # SHERRY: the last dimension used to be 1, need to make it 3
+        face_img = np.full((1, self.face_crop_size[1], self.face_crop_size[0], self.nCams), 0,
+                           dtype='uint8')  # note different shape w/ n=1 and channels = nCams
+
         # preallocate results variables (each frame)
         best_com = np.full((self.nCOMs, 3), np.NaN)
         com_reproj = np.full((self.nCOMs), np.NaN)
@@ -269,50 +286,88 @@ class posture_tracker:
             full_img = []
             for nCam in range(self.nCams):
                 flag, img = self.readers[nCam].read()
+                img = cv2.cvtColor(img, ### SHERRY: temporaily disable it
+                                  cv2.COLOR_BGR2RGB)  # SHERRY added this bcs cv2 image reader reads in BGR, need to convert to RGB to read in the images correctly
+
                 if nFrame < start_frame:
                     continue
-                full_img.append(img[:,:,0])
+                full_img.append(img)  #### SHERRY: used to be [:,:,0], but now it is taking all RGB channels
                 if full_img[nCam] is None:
                     stopReading = True
                     break
-                ds_img[nCam,:,:,0] = cv2.resize(full_img[nCam], self.ds_size,
-                                                interpolation=cv2.INTER_AREA)
+                ds_img[nCam] = cv2.resize(full_img[nCam], self.ds_size,
+                                          interpolation=cv2.INTER_AREA)  # SHERRY: used to be [nCam,:,:,0], need to change this so that it is taking in all RGB dimension
             if nFrame < start_frame:
                 continue
-            elif np.mod(nFrame, 1000)==0:
-                print(f'Reading Frame {nFrame}')
+            elif np.mod(nFrame, 1000) == 0:
+                print('Reading Frame {}'.format(nFrame))
 
             # If reading for any video failed, terminate tracking
             if stopReading:
-                print(f'Terminated Reading on Frame {nFrame}')
+                print('Terminated Reading on Frame {}'.format(nFrame))
                 break
-            
+
             # Predict coarse keypoints using COM model
             preds = com_mdl.inference_model.predict_on_batch(ds_img, numpy=True)
-            COM = np.squeeze(preds['instance_peaks']) * self.ds_fac # node locations, shape (n_cams, n_keypoints, 2)
-            conf = np.squeeze(preds['instance_peak_vals']) # confidence scores, shape (n_cams, n_keypoints)
-
+            COM = np.squeeze(preds['instance_peaks']) * self.ds_fac  # node locations, shape (n_cams, n_keypoints, 2)
+            conf = np.squeeze(preds['instance_peak_vals'])  # confidence scores, shape (n_cams, n_keypoints)
             # undistort com for each camera
             for nCam in range(self.nCams):
                 COM[nCam] = unDistortPoints(COM[nCam], cameraDicts[nCam]['K'], cameraDicts[nCam]['d'])
-
             # triangulate all COM keypoints, select best triplet and its reprojection error
             for nCom in range(self.nCOMs):
                 com_results = triangulate_confThresh_lowestErr(COM[:, nCom],
-                                                            cameraMats,
-                                                            conf[:, nCom])
+                                                               cameraMats,
+                                                               conf[:, nCom])
                 best_com[nCom], com_reproj[nCom], com_conf[nCom] = com_results
-            
             # collect COM results
             comPred.append(best_com.copy())
             comReproj.append(com_reproj.copy())
             comConf.append(com_conf.copy())
 
+            # get the 3D distance of the bird from each camera to determine cropping scale
+            body_COM = best_com[self.com_body_ind]
+            body_reproj = sba.project(np.tile(body_COM, (self.nCams, 1)),
+                                      self.camParams)  # get reprojected body centroid location for each camera
+            camDist = sba.rotate(np.tile(body_COM, (self.nCams, 1)),
+                                 self.camParams[:, :3])  # rotate to camera coordinates
+            camDist = camDist[:, 2] + self.camParams[:, 5]  # get z-axis distance ie along optical axis
+            camScale = self.camParams[:, 6] / camDist  # convert to focal length divided by distance
+            half_width = camScale * self.w3d
+
+            # base_dir = 'Z:/Sherry/poseTrackingXL/training_files/posture_vids/unseen_images'  # Base directory for cropped images
+            ncams = 4  # Number of cameras
+            camera_dirs = [os.path.join(base_dir, f'cam{i + 1}') for i in range(ncams)]
+
+            # Create directories if they don't exist
+            for dir in camera_dirs:
+                if not os.path.exists(dir):
+                    os.makedirs(dir)
+
+
+            # save the cropped image, min index, and crop scale for each camera
+            min_ind = np.full((self.nCams, 1, 2), np.NaN)
+            crop_scale = np.full((self.nCams, 1, 2), np.NaN)
+            for nCam in range(self.nCams):
+                thisCom = np.maximum(body_reproj[nCam], 0)
+                thisCom[0] = np.minimum(thisCom[0], full_img[nCam].shape[1])  # x limit is shape[1]
+                thisCom[1] = np.minimum(thisCom[1], full_img[nCam].shape[0])  # y limit is shape[0]
+                thisHalfWidth = np.maximum(half_width[nCam], 25)  # minimum 51px image for body
+                crop_img[nCam], min_ind[nCam], crop_scale[nCam] = crop_from_com(full_img[nCam],
+                                                                                thisCom,
+                                                                                thisHalfWidth,
+                                                                                )                # SHERRY: used to be crop_img[nCam,:,:,0], need to get all RGB
+                filename = f'img{nFrame}.png'  # Name of the file to save
+                crop_img_rgb = cv2.cvtColor(crop_img[nCam], cv2.COLOR_BGR2RGB)
+                cv2.imwrite(os.path.join(camera_dirs[nCam], filename),crop_img_rgb)
+                #crop_images.append(crop_img)
+
         # the return call here executes if loop finishes naturally or is broken when reading fails
         return {'com_preds':np.stack(comPred),
                 'com_rep_err':np.stack(comReproj),
                 'com_conf':np.stack(comConf),
-                'read_status': stopReading}
+                'read_status': stopReading,
+                'cropped_unseen_images':crop_img}
 
     def track_video(self, start_frame=0, nFrames=1000):
         '''
@@ -330,9 +385,9 @@ class posture_tracker:
         cameraMats = []
         for nCam in range(self.nCams): # range would be 0,1,2,3
             theseParams = unconvertParams(self.camParams[nCam])
-            #theseParams = DAParams(self.camParams[nCam,0]) # XL added this to accomodate DA's format
             cameraDicts.append(theseParams)
             cameraMats.append(camera_matrix(theseParams['K'], theseParams['R'], theseParams['t'].reshape((1,3))))
+        print("cameraMats: ",cameraMats)
         sba = PySBA(self.camParams, np.NaN, np.NaN, np.NaN, np.NaN)
 
         ''' Read in video and predict keypoints '''
@@ -349,8 +404,8 @@ class posture_tracker:
         facePreds = []
 
         # preallocate image arrays
-        ds_img = np.full((self.nCams, self.ds_size[1], self.ds_size[0], 1), 0, dtype='uint8')
-        crop_img = np.full((self.nCams, self.crop_size[1], self.crop_size[0], 1), 0, dtype='uint8')
+        ds_img = np.full((self.nCams, self.ds_size[1], self.ds_size[0], 3), 0, dtype='uint8')  # SHERRY: the last dimension used to be 1, needs to make it 3
+        crop_img = np.full((self.nCams, self.crop_size[1], self.crop_size[0], 3), 0, dtype='uint8') # SHERRY: the last dimension used to be 1, need to make it 3
         face_img = np.full((1, self.face_crop_size[1], self.face_crop_size[0], self.nCams), 0, dtype='uint8') # note different shape w/ n=1 and channels = nCams
         
         # preallocate results variables (each frame)
@@ -371,14 +426,16 @@ class posture_tracker:
             full_img = []
             for nCam in range(self.nCams):
                 flag, img = self.readers[nCam].read()
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # SHERRY added this bcs cv2 image reader reads in BGR, need to convert to RGB to read in the images correctly
+
                 if nFrame < start_frame:
                     continue
-                full_img.append(img[:,:,0]) #### check this to make sure the selection is not messed up
+                full_img.append(img) #### SHERRY: used to be [:,:,0], but now it is taking all RGB channels
                 if full_img[nCam] is None:
                     stopReading = True
                     break
-                ds_img[nCam,:,:,0] = cv2.resize(full_img[nCam], self.ds_size,
-                                                interpolation=cv2.INTER_AREA)
+                ds_img[nCam] = cv2.resize(full_img[nCam], self.ds_size,
+                                                interpolation=cv2.INTER_AREA)  #SHERRY: used to be [nCam,:,:,0], need to change this so that it is taking in all RGB dimension
             if nFrame < start_frame:
                 continue
             elif np.mod(nFrame, 1000)==0:
@@ -396,7 +453,7 @@ class posture_tracker:
             # undistort com for each camera
             for nCam in range(self.nCams):
                 COM[nCam] = unDistortPoints(COM[nCam], cameraDicts[nCam]['K'], cameraDicts[nCam]['d'])
-            # triangulate all COM keypoints, select best triplet and its reprojection error (XL: this seems to be irrelevant for colored images dimension issue since it only involves the coordinates)
+            # triangulate all COM keypoints, select best triplet and its reprojection error
             for nCom in range(self.nCOMs):
                 com_results = triangulate_confThresh_lowestErr(COM[:, nCom],
                                                             cameraMats,
@@ -414,7 +471,7 @@ class posture_tracker:
             camDist = camDist[:, 2] + self.camParams[:,5] # get z-axis distance ie along optical axis
             camScale = self.camParams[:, 6] / camDist  # convert to focal length divided by distance
             half_width = camScale * self.w3d
-            
+
             # save the cropped image, min index, and crop scale for each camera
             min_ind = np.full((self.nCams, 1, 2), np.NaN)
             crop_scale = np.full((self.nCams, 1, 2), np.NaN)
@@ -423,30 +480,37 @@ class posture_tracker:
                 thisCom[0] = np.minimum(thisCom[0], full_img[nCam].shape[1]) # x limit is shape[1]
                 thisCom[1] = np.minimum(thisCom[1], full_img[nCam].shape[0]) # y limit is shape[0]
                 thisHalfWidth = np.maximum(half_width[nCam], 25) # minimum 51px image for body
-                crop_img[nCam,:,:,0], min_ind[nCam], crop_scale[nCam] = crop_from_com(full_img[nCam],
+                crop_img[nCam], min_ind[nCam], crop_scale[nCam] = crop_from_com(full_img[nCam],
                                                                                         thisCom,
                                                                                         thisHalfWidth,
-                                                                                        ) # XL: need to check crop_img dimension to know if [nCam,:,:,0] is appropriate
+                                                                                        ) # SHERRY: used to be crop_img[nCam,:,:,0], need to get all RGB
+
 
             # Predict posture and convert to full image pixel coordinates
             crop_preds = posture_mdl.inference_model.predict_on_batch(crop_img, numpy=True)
             raw_posture = np.squeeze(crop_preds['instance_peaks']) / crop_scale + min_ind # node locations, shape (n_cams, n_keypoints, 2) # this is where it gets converted back to original image size.
+            print("raw posture shape", raw_posture.shape)
             rawPosturePreds.append(raw_posture)
             posture_2d = raw_posture
             conf = np.squeeze(crop_preds['instance_peak_vals']) # confidence scores, shape (n_cams, n_keypoints)
             # undistort posture for each camera
             for nCam in range(self.nCams):
                 posture_2d[nCam] = unDistortPoints(posture_2d[nCam], cameraDicts[nCam]['K'], cameraDicts[nCam]['d'])
+            print("posture_2d value: ",posture_2d)
             # triangulate posture
             for nPart in range(self.nParts):
                 pos_results = triangulate_confThresh_lowestErr(posture_2d[:, nPart],
                                                                 cameraMats,
                                                                 conf[:, nPart])
                 best_posture[nPart], posture_reproj[nPart], posture_conf[nPart] = pos_results
+                print("best posture shape", best_posture.shape)
+            print("posturePred value: ", best_posture)
             # collect posture results
             posturePred.append(best_posture.copy())
             postureReproj.append(posture_reproj.copy())
             postureConf.append(posture_conf.copy())
+            full_img_sleap = np.stack(full_img, axis=0)
+
 
         # the return call here executes if loop finishes naturally or is broken when reading fails
         return {'posture_preds':np.stack(posturePred),
@@ -456,4 +520,7 @@ class posture_tracker:
                 'com_rep_err':np.stack(comReproj),
                 'com_conf':np.stack(comConf),
                 'posture_conf':np.stack(postureConf),
-                'read_status': stopReading}
+                'read_status': stopReading,
+                'unseen_images':full_img_sleap,
+                'sleap_raw_predicted_points_scale_back': raw_posture,
+                'cropped_unseen_images':crop_img} # SHERRY added the sleap raw output

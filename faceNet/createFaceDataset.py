@@ -6,6 +6,7 @@ import glob
 from scipy.io import loadmat
 import tensorflow as tf
 import matplotlib.pyplot as plt
+
 #%% config
 gpu = 0
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -13,7 +14,7 @@ tf.config.experimental.set_visible_devices(gpus[gpu],'GPU')
 tf.config.experimental.set_memory_growth(gpus[gpu], True)
 
 #%% Load Data
-labelDir = "Z:\Selmaan\Seed Carrying Labeling\Labeled Data"
+labelDir = "Z:\Sherry\poseTrackingXL\Seed Carrying Labeling\Labeled Data"
 # allFn = glob.glob(labelDir+'\*.mat')
 # labelDir = "/media/selmaan/Locker/Selmaan/Seed Carrying Labeling/Labeled Data"
 allFn = glob.glob(labelDir+'/seedLabel_*.mat') + glob.glob(labelDir+'/manualSeedRelabel*.mat')
@@ -36,6 +37,8 @@ nLabels = validLabels.sum()
 allIms = allIms.astype('float32')
 allLabels = allLabels.astype('float32')
 #%% Network architecture
+import sys
+sys.path.append("faceNet/")
 import faceNetArchitectures as fn
 
 # define input layer
@@ -50,7 +53,7 @@ data_augmentation = Sequential(
         preprocessing.RandomRotation(factor=.1, fill_mode="reflect", interpolation="bilinear")
     ]
 )
-viewMdl = fn.s5((128,128,1), data_augmentation)
+viewMdl = fn.s5((128,128,1), data_augmentation) # input images that are cropped into face, but only one view
 
 # make joint prediction model
 jointMdl = fn.j4(inputs_shape, viewMdl)

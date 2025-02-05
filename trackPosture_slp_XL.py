@@ -2,9 +2,10 @@ import numpy as np
 import tensorflow as tf
 import cv2
 # from tensorflow.keras.models import load_model as tf_load
+import matplotlib.pyplot as plt
 
 import sys
-sys.path.append(".//utils/")
+sys.path.append("C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL/utils")
 from load_matlab_data import loadmat_sbx
 from slp_utils import posture_tracker
 import scipy.io
@@ -17,13 +18,13 @@ im_w = 2200
 im_h = 650
 
 # video params
-start_frame = 20*60*50 # in frames at 50fps
-nFrames = 5*60*50 # in frames at 50fps #(XL) try 600 sec, which is 10 mins 
+start_frame = 0 # in frames at 50fps # SHERRY: start at 0 min
+nFrames = 5 # in frames at 50fps # SHERRY: take only 100 frames, which is 2 sec
 
 ''' UPDATE paths as needed '''
 # videos
 root_dir = "Z:/Sherry/acquisition/"
-vid_root = f"{root_dir}ROS103_090324/"
+vid_root = f"{root_dir}AMB155_100424_2/"
 
 # camera params
 cam_param_dir = "Z:/Sherry/camera_calibration/"  
@@ -39,7 +40,7 @@ postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/240924_162008.s
 # faceNet = "Z:\Selmaan\DPK-transfer\j4-v4"
 
 # to save
-pred_date = "240924"
+pred_date = "101724"
 # save_file = f'{pred_date}_posture_2stage.npy' # python
 save_file = f'{pred_date}_posture_2stage.mat' # matlab
 save_path = f"{vid_root}{save_file}"

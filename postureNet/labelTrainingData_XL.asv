@@ -67,6 +67,23 @@ for cam_idx = 1:nCams
     allParams{cam_idx} = tmp;
 end
 
+% read in images
+videos = cell(nCams,1);
+for cam_idx = 1:nCams
+    disp(camNames(cam_idx))
+    fn = fullfile(vidPath, [camNames{cam_idx}, '.avi']);
+    reader = VideoReader(fn);
+    % reader = VideoReaderFFMPEG(fn, 'FFMPEGPATH', ffmpegPath);
+    frame_rate = reader.FrameRate;
+    vid = zeros(reader.Height, reader.Width, 3, nFrames, 'uint8');
+    for f = 1:nFrames
+        f_idx = frame_idx(f);
+        frameRGB = reader.read(round(f_idx));
+        vid(:,:,:,f) = frameRGB;
+    end
+    videos{cam_idx} = vid;
+end
+
 %%
 videos = cell(nCams,1);
 for cam_idx = 1:nCams
@@ -130,18 +147,3 @@ writeNPY(frame_idx(logical(labeled_frame_idx)), fullfile(save_dir, save_frames_f
 training_file = '20240903_190826_Label3D.mat';
 labelGui = Label3D(fullfile(save_dir, training_file), videos, 'defScale', .12);
 colormap(labelGui.h{1}.Parent, 'gray'),
-
-%%
-dataPath = fullfile('Z:\Sherry\poseTrackingXL\training_files\Label3D\coconut_peanut_nothing_test.mat');
-save(dataPath,'videos','data_3D','skeleton','frame_idx','camParams','allParams','-v7.3')
-
-grayVideo = cell(size(videos));
-
-% Loop through each frame in the cell array
-for i = 1:length(videos)
-    % Convert each RGB frame to grayscale
-    grayVideo{i} = rgb2gray(videos{i});
-end
-
-% Optionally, display one of the grayscale images to verify
-imshow(grayVideo{1});

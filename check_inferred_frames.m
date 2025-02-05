@@ -3,20 +3,19 @@ clear all
 close all;
 
 %% Set file paths and load results from SLEAP inference
-% bird_id = 'SLV124';
-% session_date = '240906';
-% session_root = ['Z:\Isabel\data\behavior\', bird_id, '\'];
-% session_dir = [bird_id, '_', session_date];
-% results_file = '240909_posture_2stage.mat';
-% % load(fullfile(session_root, session_dir, results_file))
-load('Z:\Sherry\acquisition\ROS103_090324\091124_posture_2stage.mat');
+bird_id = 'SLV123';
+session_date = '110824_wEphys';
+session_root = ['Z:\Sherry\poseTrackingXL\training_files\raw_acquisition_copy\'];
+session_dir = [bird_id, '_', session_date];
+results_file = '011125_posture_2stage.mat';
+load(fullfile(session_root, session_dir, results_file))
+% define the video file
+vidPath = fullfile(session_root, session_dir);
+% load('Z:\Sherry\acquisition\ROS103_090324\091124_posture_2stage.mat');
 
+%%
 codePath = 'C:\Users\xl313\OneDrive\Documents\GitHub\Label3D';
 addpath(genpath(codePath))
-
-ffmpegWrapper = 'C:\Users\xl313\OneDrive\Documents\GitHub\bird_pose_tracking\utils\VideoReaderFFMPEG\';
-addpath(genpath(ffmpegWrapper))
-ffmpegPath = 'C:\ffmpeg\bin';
 
 tracking_root = 'C:\Users\xl313\OneDrive\Documents\GitHub\bird_pose_tracking\';
 cd 'C:\Users\xl313\OneDrive\Documents\GitHub\bird_pose_tracking\training_files\Label3D'
@@ -28,12 +27,6 @@ cam_array_file = '092124_camOptArrayDA_XL.mat';
 
 skeleton_path = [tracking_root, 'postureNet\'];
 skeleton_file = 'posture_skeleton_IL.csv';
-
-% define the video file
-% vidRoot = ['Z:\Isabel\data\behavior\', bird_id, '\'];
-% vidFolder = [bird_id, '_', session_date];
-% vidPath = fullfile(session_root, session_dir);
-vidPath = 'Z:\Sherry\acquisition\ROS103_090324';
 
 %% Read in and reformat camera array
 camNames = {'blue_cam', 'green_cam', 'red_cam', 'yellow_cam'};
@@ -84,13 +77,14 @@ avg_rep_err = median(posture_reproj, 2);
 avg_conf = median(posture_conf, 2);
 
 % high confidence frames
-low_rep_err = avg_rep_err < prctile(avg_rep_err, 0.5);
-high_conf = avg_conf > prctile(avg_conf, 99.5);
+low_rep_err = avg_rep_err < prctile(avg_rep_err, 95); % originally 0.5
+high_conf = avg_conf > prctile(avg_conf, 95); % originally 99.5
 good_frame_idx = low_rep_err & high_conf;
 
+
 % low confidence frames
-high_rep_err = avg_rep_err > prctile(avg_rep_err, 99.9);
-low_conf = avg_conf < prctile(avg_conf, 0.1);
+high_rep_err = avg_rep_err > prctile(avg_rep_err, 90); % used to be 99.9
+low_conf = avg_conf < prctile(avg_conf, 5); % used to be 0.1
 bad_frame_idx = high_rep_err & low_conf;
 
 
@@ -98,8 +92,15 @@ bad_frame_idx = high_rep_err & low_conf;
 % data params
 nFrames = sum(good_frame_idx);
 maxFrames = length(good_frame_idx);
-all_frames = 1:1:maxFrames;
+all_frames = 35500:(35500 + maxFrames);
 frame_idx = all_frames(good_frame_idx);
+
+% %%% TMP
+% nFrames = 200;
+% maxFrames = 200;
+% all_frames = 3500:200;
+% frame_idx = all_frames;
+start_frame = 35500;
 
 % read in images
 good_videos = cell(nCams,1);
@@ -107,22 +108,33 @@ for cam_idx = 1:nCams
     disp(camNames(cam_idx))
     fn = fullfile(vidPath, [camNames{cam_idx}, '.avi']);
     reader = VideoReader(fn);
-    % reader = VideoReaderFFMPEG(fn, 'FFMPEGPATH', ffmpegPath);
     frame_rate = reader.FrameRate;
-    vid = zeros(reader.Height, reader.Width, 1, nFrames, 'uint8');
+    vid = zeros(reader.Height, reader.Width, 3, nFrames, 'uint8');
     for f = 1:nFrames
-        f_idx = frame_idx(f);
-        frameRGB = reader.read(round(f_idx));
-        vid(:,:,:,f) = frameRGB(:,:,1);
+        reader.CurrentTime = frame_idx(f)/frame_rate;
+        frameRGB = readFrame(reader);
+        vid(:,:,:,f) = frameRGB;
     end
     good_videos{cam_idx} = vid;
 end
+
+    % reader = VideoReaderFFMPEG(fn, 'FFMPEGPATH', ffmpegPath);
+%     frame_rate = reader.FrameRate;
+%     vid = zeros(reader.Height, reader.Width, 3, nFrames, 'uint8');
+%     for f = 1:nFrames
+%         f_idx = frame_idx(f);
+%         frameRGB = reader.read(round(f_idx));
+%         vid(:,:,:,f) = frameRGB;
+%     end
+%     good_videos{cam_idx} = vid;
+% end
 
 %% Makes a Label3D object and start the GUI (high conf)
 % To confirm that high conf frames look good
 pts3d = permute(posture_preds, [1, 3, 2]);
 labelGui = Label3D(allParams, good_videos, skeleton, 'defScale', .12);
 labelGui.loadFrom3D(pts3d(good_frame_idx, :, :));
+%labelGui.loadFrom3D(pts3d)
 colormap(labelGui.h{1}.Parent, 'gray'),
 
 %% Save as a training file
@@ -135,9 +147,10 @@ labelGui.saveAll()
 
 %% Load the bad video frames
 % data params
+start_frame = 35500;
 nFrames = sum(bad_frame_idx);
 maxFrames = length(bad_frame_idx);
-all_frames = 1:1:maxFrames;
+all_frames = start_frame:(start_frame + maxFrames);
 frame_idx = all_frames(bad_frame_idx);
 
 % read in images
@@ -145,20 +158,19 @@ bad_videos = cell(nCams,1);
 for cam_idx = 1:nCams
     disp(camNames(cam_idx))
     fn = fullfile(vidPath, [camNames{cam_idx}, '.avi']);
-%     reader = VideoReader(fn);
-    reader = VideoReaderFFMPEG(fn, 'FFMPEGPATH', ffmpegPath);
+    reader = VideoReader(fn);
     frame_rate = reader.FrameRate;
-    vid = zeros(reader.Height, reader.Width, 1, nFrames, 'uint8');
+    vid = zeros(reader.Height, reader.Width, 3, nFrames, 'uint8');
     for f = 1:nFrames
-        f_idx = frame_idx(f);
-        frameRGB = reader.read(round(f_idx));
-        vid(:,:,:,f) = frameRGB(:,:,1);
+        reader.CurrentTime = frame_idx(f)/frame_rate;
+        frameRGB = readFrame(reader);
+        vid(:,:,:,f) = frameRGB;
     end
     bad_videos{cam_idx} = vid;
 end
 %% Makes a Label3D object and start the GUI (low conf)
 % To identify and correct failure modes
-pts3d = permute(posture_preds, [1, 3, 2]);
+%pts3d = permute(posture_preds, [1, 3, 2]);
 labelGui = Label3D(allParams, bad_videos, skeleton, 'defScale', .12);
 labelGui.loadFrom3D(pts3d(bad_frame_idx, :, :));
 colormap(labelGui.h{1}.Parent, 'gray'),
@@ -173,4 +185,28 @@ labelGui.saveAll()
 training_file = [save_file, '.mat'];
 labelGui = Label3D(fullfile(save_dir, training_file), 'defScale', .12);
 colormap(labelGui.h{1}.Parent, 'gray'),
+
+
+
+
+
+
+
+
+
+
+
+%%%% 
+%% Makes a Label3D object and start the GUI (high conf)
+% To confirm that high conf frames look good
+labelGui = Label3D(camParams, label_frames, skeleton, 'defScale', .12);
+% labelGui.loadFrom3D(data_3D)
+colormap(labelGui.h{1}.Parent, 'gray'),
+
+%%
+points_3d = labelGui.points3D;
+pts3d = points_3d;
+pts3d = reshape(pts3d, size(pts3d, 1), 3, []);
+pts3d = permute(pts3d, [3, 2, 1]);
+
 

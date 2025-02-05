@@ -10,7 +10,7 @@ close all;
 %addpath(genpath(codePath))
 
 %% Define chickadee training video files
-folderName  = 'Z:\Sherry\acquisition\SLV123_100424\';
+folderName  = 'Z:\Sherry\acquisition\SLV123_110824_wEphys\';
 calib.trainingVideoFiles = { ...
  [folderName 'blue_cam.avi'], ...
  [folderName 'green_cam.avi'], ...
@@ -31,8 +31,8 @@ skeleton_file = 'posture_skeleton_IL.csv';
 % session_date = '100424';
 % vidRoot = ['Z:\Sherry\acquisition\', bird_id, '\'];
 
-bird_id = 'AMB155';
-session_date = '100424_01';
+bird_id = 'SLV123';
+session_date = '110824_wEphys';
 vidRoot = ['Z:\Sherry\acquisition\', bird_id, '\'];
 vidFolder = [bird_id, '_', session_date];
 vidPath = fullfile(vidRoot, vidFolder);
@@ -40,10 +40,13 @@ vidPath = fullfile(vidRoot, vidFolder);
 %% Read in the video for each camera
 % data params
 camNames = {'red_cam', 'yellow_cam', 'green_cam', 'blue_cam'};
-nFrames = 5; % 100 for AMB104
+nFrames = 15; % 100 for AMB104
 %maxFrames = 50*60*100; % 50 Hz * 60 seconds * 100 minutes
 nCams = length(camNames);
 %frame_idx = round(linspace(5*60*50, maxFrames, nFrames)); % for uniform spacing
+
+% coconut, peanut and nothing carrying frames (3 x 5)
+frame_idx = sort([83118,83133,83153,83216,83866,85667,85672,85736,92089,92169,27185,27187,27346,27477,78831])
 
 %%
 % read in and reformat camera array

@@ -441,18 +441,6 @@ def convertParams(camParams):
         allParams[nCam,:] = np.hstack((r,t,f,d,c))
     return allParams
 
-def DAParams(camParam): # XL created this to substitute the optCamArray form from pySBA with DA's matlab struct form
-    K = np.array(camParam['K']) #camParams {1,1}, which is the first cam, will be [0,0] in python 
-    r = np.array(camParam['r'])
-    t = np.array(camParam['t'])
-    d = np.array(camParam['RDistort'])
-    # Clean up each array
-    K = K[0,0]
-    r = r[0,0]
-    t = t[0,0]
-    d = d[0,0]
-    return {'K': K, 'R':r, 't':t, 'd':d}
-
 def unconvertParams(camParamVec):
     thisK = np.full((3, 3), 0)
     thisK[0, 0] = camParamVec[6]

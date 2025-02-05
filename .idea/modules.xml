@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/faceNet/.idea/faceNet.iml" filepath="$PROJECT_DIR$/faceNet/.idea/faceNet.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/supervisely_dpk_training.iml" filepath="$PROJECT_DIR$/.idea/supervisely_dpk_training.iml" />
+      <module fileurl="file://Z:/Sherry/poseTrackingXL/training_files/.idea/training_files.iml" filepath="Z:/Sherry/poseTrackingXL/training_files/.idea/training_files.iml" />
     </modules>
   </component>
 </project>
