@@ -1,4 +1,6 @@
 #%%
+# 021025: modified by Sherry
+
 import numpy as np
 import csv
 import cv2
@@ -179,8 +181,8 @@ class posture_tracker:
                     ds_fac=4, w3d=80, crop_size=(500,500),
                     nParts=15, nCOMs=3, com_body_ind=1,
                     com_model=None, posture_model=None, face_model=None,
-                    face_w3d=0.08, com_head_ind=0, face_crop_size=(128,128)):
-        
+                    face_w3d=20, com_head_ind=0, face_crop_size=(128,128)):
+        # original face_w3d value: 0.08
         # input a list of video reader objects
         self.readers = readers
         self.nCams = len(readers)
@@ -190,7 +192,7 @@ class posture_tracker:
         self.posture_model = posture_model
         self.face_model = face_model
         self.ds_fac = ds_fac
-        self.ds_size = (2200//ds_fac, 650//ds_fac) # UPDATE to match your image size in pixels
+        self.ds_size = (2200//ds_fac, 650//ds_fac) # UPDATE to match your image size in pixels # updated by XL
         self.w3d = w3d
         self.crop_size = crop_size
         self.nParts = nParts
@@ -268,8 +270,8 @@ class posture_tracker:
                          dtype='uint8')  # SHERRY: the last dimension used to be 1, needs to make it 3
         crop_img = np.full((self.nCams, self.crop_size[1], self.crop_size[0], 3), 0,
                            dtype='uint8')  # SHERRY: the last dimension used to be 1, need to make it 3
-        face_img = np.full((1, self.face_crop_size[1], self.face_crop_size[0], self.nCams), 0,
-                           dtype='uint8')  # note different shape w/ n=1 and channels = nCams
+        face_img = np.full((3, self.face_crop_size[1], self.face_crop_size[0], self.nCams), 0,
+                            dtype='uint8')  # note different shape w/ n=1 and channels = nCams
 
         # preallocate results variables (each frame)
         best_com = np.full((self.nCOMs, 3), np.NaN)
@@ -381,6 +383,7 @@ class posture_tracker:
 
         ''' Collect camera parameters '''
         print('Collecting Camera Parameters')
+        '''Initialize objects'''
         cameraDicts = []
         cameraMats = []
         for nCam in range(self.nCams): # range would be 0,1,2,3
@@ -406,8 +409,13 @@ class posture_tracker:
         # preallocate image arrays
         ds_img = np.full((self.nCams, self.ds_size[1], self.ds_size[0], 3), 0, dtype='uint8')  # SHERRY: the last dimension used to be 1, needs to make it 3
         crop_img = np.full((self.nCams, self.crop_size[1], self.crop_size[0], 3), 0, dtype='uint8') # SHERRY: the last dimension used to be 1, need to make it 3
-        face_img = np.full((1, self.face_crop_size[1], self.face_crop_size[0], self.nCams), 0, dtype='uint8') # note different shape w/ n=1 and channels = nCams
-        
+        # XL temporaily commented out, don't understand why need to be a different shape
+        # face_img = np.full((3, self.face_crop_size[1], self.face_crop_size[0], self.nCams), 0,
+        #                    dtype='uint8')  # note different shape w/ n=1 and channels = nCams
+        face_img_rgb = np.full((self.face_crop_size[1], self.face_crop_size[0], 3, self.nCams), 0,
+                           dtype='uint8')  # note different shape w/ n=1 and channels = nCams
+        face_img_gray = np.full((1, self.face_crop_size[1], self.face_crop_size[0], self.nCams), 0,
+                           dtype='uint8')  # note different shape w/ n=1 and channels = nCams
         # preallocate results variables (each frame)
         best_com = np.full((self.nCOMs, 3), np.NaN)
         com_reproj = np.full((self.nCOMs), np.NaN)
@@ -416,6 +424,7 @@ class posture_tracker:
         posture_reproj = np.full((self.nParts), np.NaN)
         posture_conf = np.full((self.nParts), np.NaN)
 
+        '''Read in RGB frames'''
         # flag that video reading failed
         stopReading = False
 
@@ -425,34 +434,32 @@ class posture_tracker:
             # Read and downsample
             full_img = []
             for nCam in range(self.nCams):
-                flag, img = self.readers[nCam].read()
+                flag, img = self.readers[nCam].read() # a list of video readers (one for each camera); .read() read the next frame from the video. The output "flag" indicates if the read is successful, the output "img" is the actual image read.
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # SHERRY added this bcs cv2 image reader reads in BGR, need to convert to RGB to read in the images correctly
-
                 if nFrame < start_frame:
-                    continue
-                full_img.append(img) #### SHERRY: used to be [:,:,0], but now it is taking all RGB channels
+                    continue # skip frames before indicated start_frame
+                full_img.append(img) # SHERRY: used to be [:,:,0], but now it is taking all RGB channels
                 if full_img[nCam] is None:
                     stopReading = True
                     break
-                ds_img[nCam] = cv2.resize(full_img[nCam], self.ds_size,
+                ds_img[nCam] = cv2.resize(full_img[nCam], self.ds_size, # this downsampled the original images 4 times
                                                 interpolation=cv2.INTER_AREA)  #SHERRY: used to be [nCam,:,:,0], need to change this so that it is taking in all RGB dimension
             if nFrame < start_frame:
                 continue
             elif np.mod(nFrame, 1000)==0:
-                print('Reading Frame {}'.format(nFrame))
-
+                print('Reading Frame {}'.format(nFrame)) # print a message every 1000 frames read to indicate progress
             # If reading for any video failed, terminate tracking
             if stopReading:
                 print('Terminated Reading on Frame {}'.format(nFrame))
                 break
             
-            # Predict coarse keypoints using COM model
-            preds = com_mdl.inference_model.predict_on_batch(ds_img, numpy=True)
-            COM = np.squeeze(preds['instance_peaks']) * self.ds_fac # node locations, shape (n_cams, n_keypoints, 2)
+            ''' comNet prediction: Predict coarse keypoints using COM model'''
+            preds = com_mdl.inference_model.predict_on_batch(ds_img, numpy=True) # use the trained comNet model to predict on unseen downsampled images (ds_img)
+            COM = np.squeeze(preds['instance_peaks']) * self.ds_fac # node locations, shape (n_cams, n_keypoints, 2) # times ds_fac to recreate the coordinates in the original image size
             conf = np.squeeze(preds['instance_peak_vals']) # confidence scores, shape (n_cams, n_keypoints)
             # undistort com for each camera
             for nCam in range(self.nCams):
-                COM[nCam] = unDistortPoints(COM[nCam], cameraDicts[nCam]['K'], cameraDicts[nCam]['d'])
+                COM[nCam] = unDistortPoints(COM[nCam], cameraDicts[nCam]['K'], cameraDicts[nCam]['d']) # eliminate the effect of camera distortion by taking into account the camera intrinsics
             # triangulate all COM keypoints, select best triplet and its reprojection error
             for nCom in range(self.nCOMs):
                 com_results = triangulate_confThresh_lowestErr(COM[:, nCom],
@@ -469,7 +476,7 @@ class posture_tracker:
             body_reproj = sba.project(np.tile(body_COM, (self.nCams, 1)), self.camParams) # get reprojected body centroid location for each camera
             camDist = sba.rotate(np.tile(body_COM, (self.nCams, 1)), self.camParams[:,:3]) # rotate to camera coordinates
             camDist = camDist[:, 2] + self.camParams[:,5] # get z-axis distance ie along optical axis
-            camScale = self.camParams[:, 6] / camDist  # convert to focal length divided by distance
+            camScale = self.camParams[:, 6] / camDist  # camera focal length (fixed) divided by z-axis distance between the camera and the object
             half_width = camScale * self.w3d
 
             # save the cropped image, min index, and crop scale for each camera
@@ -485,31 +492,62 @@ class posture_tracker:
                                                                                         thisHalfWidth,
                                                                                         ) # SHERRY: used to be crop_img[nCam,:,:,0], need to get all RGB
 
-
-            # Predict posture and convert to full image pixel coordinates
+            '''postureNet: Predict posture and convert to full image pixel coordinates'''
             crop_preds = posture_mdl.inference_model.predict_on_batch(crop_img, numpy=True)
             raw_posture = np.squeeze(crop_preds['instance_peaks']) / crop_scale + min_ind # node locations, shape (n_cams, n_keypoints, 2) # this is where it gets converted back to original image size.
-            print("raw posture shape", raw_posture.shape)
             rawPosturePreds.append(raw_posture)
             posture_2d = raw_posture
             conf = np.squeeze(crop_preds['instance_peak_vals']) # confidence scores, shape (n_cams, n_keypoints)
             # undistort posture for each camera
             for nCam in range(self.nCams):
                 posture_2d[nCam] = unDistortPoints(posture_2d[nCam], cameraDicts[nCam]['K'], cameraDicts[nCam]['d'])
-            print("posture_2d value: ",posture_2d)
             # triangulate posture
             for nPart in range(self.nParts):
                 pos_results = triangulate_confThresh_lowestErr(posture_2d[:, nPart],
                                                                 cameraMats,
                                                                 conf[:, nPart])
                 best_posture[nPart], posture_reproj[nPart], posture_conf[nPart] = pos_results
-                print("best posture shape", best_posture.shape)
-            print("posturePred value: ", best_posture)
             # collect posture results
             posturePred.append(best_posture.copy())
             postureReproj.append(posture_reproj.copy())
             postureConf.append(posture_conf.copy())
-            full_img_sleap = np.stack(full_img, axis=0)
+            # full_img_sleap = np.stack(full_img, axis=0)
+
+            '''faceNet: predict seed or no seed'''
+            if face_mdl is not None:
+                # get the 3D distance from each camera for cropping scale
+                head_COM = best_com[self.com_head_ind]
+                head_reproj = sba.project(np.tile(head_COM, (self.nCams, 1)),
+                                          self.camParams)  # get reprojected body centroid location for each camera
+                camDist = sba.rotate(np.tile(head_COM, (self.nCams, 1)),
+                                     self.camParams[:, :3])  # rotate to camera coordinates
+                camDist = camDist[:, 2] + self.camParams[:, 5]  # get z-axis distance ie along optical axis
+                camScale = self.camParams[:, 6] / camDist  # convert to focal length divided by distance
+                half_width = camScale * self.face_w3d
+
+                # save the cropped image for each camera
+                # min_ind = np.full((self.nCams, 1, 2), np.NaN)
+                # crop_scale = np.full((self.nCams, 1, 2), np.NaN)
+                for nCam in range(self.nCams):
+                    thisCom = np.maximum(head_reproj[nCam], 0)
+                    thisCom[0] = np.minimum(thisCom[0], full_img[nCam].shape[1])  # x limit is shape[1]
+                    thisCom[1] = np.minimum(thisCom[1], full_img[nCam].shape[0])  # y limit is shape[0]
+                    thisHalfWidth = np.maximum(half_width[nCam], 15)  # minimum 31px image for head
+                    face_img_rgb[:,:,:,nCam], _, _ = crop_from_com(full_img[nCam],
+                                                                  thisCom,
+                                                                  thisHalfWidth,
+                                                                  self.face_crop_size)
+                    '''face_img is RGB 3 channels, but the face_mdl was trained on 1 channel black and white images, so need to convert'''
+                    face_img_gray[0,:, :,nCam] = (
+                            0.2989 * face_img_rgb[:, :, 0, nCam] +  # Red channel
+                            0.5870 * face_img_rgb[:, :, 1, nCam] +  # Green channel
+                            0.1140 * face_img_rgb[:, :, 2, nCam]  # Blue channel
+                    )
+                # make prediction on multichannel head data
+                thisPrediction = face_mdl.predict_on_batch(face_img_gray)
+                facePreds.append(thisPrediction.copy())
+            else:
+                facePreds.append(None)
 
 
         # the return call here executes if loop finishes naturally or is broken when reading fails
@@ -521,6 +559,7 @@ class posture_tracker:
                 'com_conf':np.stack(comConf),
                 'posture_conf':np.stack(postureConf),
                 'read_status': stopReading,
-                'unseen_images':full_img_sleap,
-                'sleap_raw_predicted_points_scale_back': raw_posture,
-                'cropped_unseen_images':crop_img} # SHERRY added the sleap raw output
+                'face_preds': np.stack(facePreds)}
+                # 'unseen_images':full_img_sleap,
+                # 'sleap_raw_predicted_points_scale_back': raw_posture,
+                # 'cropped_unseen_images':crop_img} # SHERRY added the sleap raw output
