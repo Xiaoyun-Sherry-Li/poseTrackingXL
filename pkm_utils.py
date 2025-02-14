@@ -7,7 +7,11 @@ from joblib import Parallel, delayed
 
 #%% definitions
 def make_F(dim_obs: int, Delta_t: float):
-  """makes F assuming a constant velocity model"""
+  """
+  This matrix is used to model the evolution of the system's state (e.g. positions and velocities) over time;
+  dim_obs: size of a state transition matrix;
+  makes F assuming a constant velocity model;
+  """
   blocked_row_1 = np.hstack([np.eye(dim_obs), np.eye(dim_obs)*Delta_t])
   blocked_row_2 = np.hstack([np.eye(dim_obs)*0., np.eye(dim_obs)])
   F = np.vstack([blocked_row_1, blocked_row_2])
@@ -15,7 +19,10 @@ def make_F(dim_obs: int, Delta_t: float):
   return F
 
 def make_Q(dim_obs: int, Delta_t: float, sigma_eta: float):
-    """makes Q assuming a constant velocity model"""
+    """
+    This computes the covariance of transition matrix;
+    makes Q assuming a constant velocity model
+    """
     blocked_row_1 = np.hstack([np.eye(dim_obs)*0., np.eye(dim_obs)*0.])
     blocked_row_2 = np.hstack([np.eye(dim_obs)*0., np.eye(dim_obs)*(Delta_t**2)*(sigma_eta**2)])
     Q = np.vstack([blocked_row_1, blocked_row_2])
@@ -23,13 +30,22 @@ def make_Q(dim_obs: int, Delta_t: float, sigma_eta: float):
     return Q
 
 def make_H(dim_obs: int):
+    """
+    compute the size of the observation matrix
+    """
     H =  np.hstack([np.eye(dim_obs), np.eye(dim_obs) * 0.])
     assert(H.shape == (dim_obs, dim_obs*2))
     return H
 
-def make_model(data, sigma_eta = 10., sigma_v = .003, initial_var_diag = 0.01, Delta_t=1/60):
-    dim_obs = data.shape[1]
-    dim_latent = dim_obs*2
+def make_model(data, sigma_eta = 10., sigma_v = .003, initial_var_diag = 0.01, Delta_t=1/50): # 50 is the frame rate
+    '''
+    This is a wrapper function to implement Kalman Filter on behavioral keypoint predictions
+    :param data: output of behavioral keypoint prediction (trackPosture_slp_XL.ipynb).
+    :param Delta_t: 1/FrameRate
+    :return: filtered output
+    '''
+    dim_obs = data.shape[1] # define the size of observation space (i.e. tracking in how many dimensions)
+    dim_latent = dim_obs*2 # state that the size of hidden states is 2 times larger than that of observation space
     effective_acceleration_noise = Delta_t ** 2 * (sigma_eta ** 2)
     aux_diag_noise = effective_acceleration_noise / 1e4
     init_mean = np.zeros(dim_latent)
@@ -58,12 +74,11 @@ def kf_smooth_preds(preds, reproj, repThresh=15):
         raw_data = np.ma.zeros((nT, num_coords))
         raw_mask = reproj[:,nPart] > repThresh
         for i in range(num_coords):
-            raw_data[:,i] = np.ma.array(preds[:,nPart,i], mask=raw_mask)
+            raw_data[:,i] = np.ma.array(preds[:,nPart,i], mask=raw_mask) # points with reprojection error larger than 15 are treated as unreliable and masked
         kf = make_model(raw_data)
         (smoothed_state_means, smoothed_state_covariances) = kf.smooth(raw_data)
         smoothed_pos[:,nPart,:] = smoothed_state_means[:,:num_coords]
         smoothed_vel[:, nPart, :] = smoothed_state_means[:, num_coords:]
-
     return smoothed_pos, smoothed_vel
 
 def kf_inner(preds, reproj, partNum, repThresh=15):
