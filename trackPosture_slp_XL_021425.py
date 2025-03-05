@@ -25,7 +25,7 @@ im_w = 2200
 im_h = 650
 # video params
 start_frame = 0 # in frames at 50fps # (XL, 010825: an exampler coconut caching/eating + drinking water snippet: 11:50 - 13:00 min in SLV123_110824_wEphys) 
-nFrames = 90000 # in frames at 50fps # takes 0.5 hour = 1 * 30 * 60 * 50 
+nFrames = 180000 # in frames at 50fps # takes 0.5 hour = 1 * 30 * 60 * 50
 
 ''' UPDATE paths as needed '''
 # videos
@@ -35,8 +35,8 @@ vid_root = f"{root_dir}RBY52_012025/"
 cam_params = loadmat_sbx("Z:/Sherry/poseTrackingXL/calibration_files/all_opt_arrays/102324_negated_camParams")['camParams_negateR'] #['camParams']
 
 # to save
-pred_date = "021325"
-save_file = f'{pred_date}_posture_2stage.npy' # python
+pred_date = "021725"
+save_file = f'{pred_date}_posture_2stage_1h_face.npy' # python
 # save_file = f'{pred_date}_posture_2stage_faceNet.mat' # matlab
 save_path = f"{vid_root}{save_file}"
 #%%
@@ -45,10 +45,10 @@ comNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/010725_com250107_23
 postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/010825_postureNet250108_164045.single_instance.n=460"
 faceNet = "C:/Users/xl313/OneDrive/Documents/GitHub/bird_pose_tracking/faceNet/j4-xl-v1.h5"
 # if running face model, otherwise set to None
-# joint_model = tf_load(faceNet, custom_objects={'tf': tf}, compile=True) # load the complete model
-# jp_layer = [l for l in joint_model.layers if l.name == 'joint_pred'][0] # extract out "joint_pred" layer from the model
-# face_model = tf.keras.Model(inputs=joint_model.input, outputs=jp_layer.output) # a new model that only output the "joint_pred" layer
-face_model = None
+joint_model = tf_load(faceNet, custom_objects={'tf': tf}, compile=True) # load the complete model
+jp_layer = [l for l in joint_model.layers if l.name == 'joint_pred'][0] # extract out "joint_pred" layer from the model
+face_model = tf.keras.Model(inputs=joint_model.input, outputs=jp_layer.output) # a new model that only output the "joint_pred" layer
+# face_model = None
 #%%
 # define the video reader for each camera
 all_readers = []
@@ -83,8 +83,8 @@ save_dict = {"results": results,
 np.save(save_path, save_dict)
 #%%
 # for matlab 
-scipy.io.savemat(save_path,{"posture_preds": results['posture_preds'], "posture_reproj": results['posture_rep_err'],
-                     "posture_rawpreds": results['posture_rawpred'], "com_preds": results['com_preds'], "com_reproj": results['com_rep_err'],
-                     "posture_conf":results['posture_conf'], "com_conf":results['com_conf'], #  "face_preds":results['face_preds'], "startTime": startTime,
-                     "camNames": cam_ids, "session": vid_root, "nFrames": nFrames,
-                     "camParams": cam_params, }) # "rawPostures":sleap_raw_predicted_points_scale_back
+# scipy.io.savemat(save_path,{"posture_preds": results['posture_preds'], "posture_reproj": results['posture_rep_err'],
+#                      "posture_rawpreds": results['posture_rawpred'], "com_preds": results['com_preds'], "com_reproj": results['com_rep_err'],
+#                      "posture_conf":results['posture_conf'], "com_conf":results['com_conf'], #  "face_preds":results['face_preds'], "startTime": startTime,
+#                      "camNames": cam_ids, "session": vid_root, "nFrames": nFrames,
+#                      "camParams": cam_params, }) # "rawPostures":sleap_raw_predicted_points_scale_back
