@@ -1,17 +1,14 @@
 %% Check and relabel inferred frames for a semi-manual training set
 clear all
 close all;
+clc
 codePath = 'C:\Users\xl313\OneDrive\Documents\GitHub\Label3D';
 addpath(genpath(codePath))
 cd 'C:\Users\xl313\OneDrive\Documents\GitHub\bird_pose_tracking\training_files\Label3D'
 
-%% Set file paths and load results from SLEAP inference
-
-session_root = ['Z:\Sherry\poseTrackingXL\training_files\raw_acquisition_copy\'];
-session_dir = 'RBY52_012025';
-results_file = '022525_posture_2stage_faceNet.mat';
-load(fullfile(session_root, session_dir, results_file)) % com, pos, face - conf, preds, reproj
-vidPath = fullfile(session_root, session_dir); % define the video file
+%% Set file paths and load results from SLEAP output 
+load('Z:\Sherry\acquisition\AMB155_031025\031025_posture_face.mat') % results
+vidPath = 'Z:\Sherry\acquisition\AMB155_031025';
 
 %% Read in and reformat camera parameter array
 load('Z:\Sherry\camera_calibration\092124_camOptArrayDA_XL.mat')
@@ -35,7 +32,7 @@ end
 % load the csv file
 skeleton_file = 'C:\Users\xl313\OneDrive\Documents\GitHub\bird_pose_tracking\postureNet\posture_skeleton_IL.csv';
 opts = detectImportOptions(skeleton_file);
-opts.SelectedVariableNames = [1:3];
+opts.SelectedVariableNames = 1:3;
 skeleton_info = readmatrix(skeleton_file, opts);
 
 % define the nodes and edges
@@ -70,9 +67,8 @@ skeleton.color = lines(length(skeleton.joints_idx)); % 15 body parts -> 15 disti
 % 28-35 sec 
 FPS = 50;
 predStart = 28; % in seconds 
-predFrames = 3 * FPS; % duration, in frames 
+predFrames = 7 * FPS; % duration, in frames 
 predIdx = predStart * FPS : predStart * FPS + predFrames - 1;
-maxFrames = predStart * FPS + predFrames;
 
 %% read in frames
 predVid = cell(nCams,1);
@@ -95,18 +91,18 @@ close all
 viewGui = View3D(allParams, predVid, skeleton);
 viewGui.defScale= 35;
 colormap(viewGui.h{1}.Parent, 'gray');
-pts3d_com = permute(com_preds, [1, 3, 2]);
 
-%% Load COM Data (uncomment next line, comment the next session to produce comNet keypoint predictions video)
+% Load COM Data (uncomment next line, comment the next session to produce comNet keypoint predictions video)
+% pts3d_com = permute(results.com_preds, [1, 3, 2]);
 % viewGui.loadFrom3D(pts3d_com(predIdx, :, :));
 
-%% Load Posture Data
-pts3d_posture = permute(posture_preds, [1, 3, 2]);
+% Load Posture Data
+pts3d_posture = permute(results.posture_preds, [1, 3, 2]);
 viewGui.loadFrom3D(pts3d_posture(predIdx, :, :));
 
-%% Optional Commands
-cd 'Z:\Sherry\poseTrackingXL\training_files\raw_acquisition_copy\RBY52_012025\'  
-v = VideoWriter('exPOS','MPEG-4');
+%% (Optional) Create a video 
+cd 'Z:\Sherry\acquisition\AMB155_031025\behavioral_data'  
+v = VideoWriter('raw_pred','MPEG-4');
 v.Quality=95;
 v.FrameRate = 10;
 v.open,
@@ -120,28 +116,33 @@ for i = 1:predFrames
 end
 v.close
 
-% the following sessions identify good and bad individual frames
-%% Get indices for high/low confidence frames
-avg_rep_err = median(posture_reproj, 2);
-avg_conf = median(posture_conf, 2);
+%%  the following sessions identify good and bad individual frames
+% Get an idea of the distribution of confidence levels
+% Get the median values for all body parts
+avg_rep_err = median(results.posture_rep_err, 2);
+avg_conf = median(results.posture_conf, 2);
 
-% high confidence frames
-low_rep_err = avg_rep_err < prctile(avg_rep_err, 95); % originally 0.5
-high_conf = avg_conf > prctile(avg_conf, 95); % originally 99.5
+hist(avg_rep_err(avg_rep_err < prctile(avg_rep_err, 95)))
+% hist(avg_rep_err)
+
+%%
+% high confidence & low reprojection error frames
+low_rep_err = avg_rep_err < prctile(avg_rep_err, 0.5); % originally 0.5
+high_conf = avg_conf > prctile(avg_conf, 99.5); % originally 99.5
 good_frame_idx = low_rep_err & high_conf;
 
-% low confidence frames
-high_rep_err = avg_rep_err > prctile(avg_rep_err, 90); % used to be 99.9
-low_conf = avg_conf < prctile(avg_conf, 5); % used to be 0.1
+% low confidence & low reprojection error frames
+high_rep_err = avg_rep_err > prctile(avg_rep_err, 99.9); % used to be 99.9
+low_conf = avg_conf < prctile(avg_conf, 0.1); % used to be 0.1
 bad_frame_idx = high_rep_err & low_conf;
 
 %% Load the good video frames
 % data params
 nFrames = sum(good_frame_idx);
 maxFrames = length(good_frame_idx);
-all_frames = 35500:(35500 + maxFrames);
+all_frames = 0:(0 + maxFrames);
 frame_idx = all_frames(good_frame_idx);
-start_frame = 35500;
+start_frame = 0;
 
 % read in images
 good_videos = cell(nCams,1);
@@ -162,23 +163,38 @@ end
 %% Makes a Label3D object and start the GUI (high conf)
 close all
 % To confirm that high conf frames look good
-pts3d = permute(posture_preds, [1, 3, 2]);
-labelGui = Label3D(allParams, good_videos, skeleton, 'defScale', .12);
+pts3d = permute(results.posture_preds, [1, 3, 2]);
+labelGui = Label3D(allParams, good_videos, skeleton, 'defScale', 35);
 labelGui.loadFrom3D(pts3d(good_frame_idx, :, :));
-%labelGui.loadFrom3D(pts3d)
 colormap(labelGui.h{1}.Parent, 'gray'),
 
-%% Save as a training file
-% Done through 85, but need to re-check early frames esp face
-save_dir = 'Z:\Sherry\poseTrackingXL\training_files\raw_acquisition_copy\RBY52_012025\';
-save_file = [session_dir, '_inferred']; % good frames
+%% Before closing the GUI, save as a training file
+save_dir = 'Z:\Sherry\poseTrackingXL\training_files\Label3D\';
+save_file = 'AMB155_031025_inferred'; % good frames
+
 labelGui.savePath = fullfile(save_dir, save_file);
 labelGui.saveAll()
 
+%% To integrate adjusted points with the unmodified points and save again
+close all
+load(fullfile(save_dir, save_file));
+labelGui = Label3D(camParams, videos, skeleton, 'defScale', 35);
+pts3d = permute(results.posture_preds, [1, 3, 2]);
+good_pts = pts3d(good_frame_idx, :, :);
+good_pts = reshape(good_pts, 72, []);
+good_pts(~isnan(data_3D)) = data_3D(~isnan(data_3D));
+labelGui.loadFrom3D(good_pts);
+colormap(labelGui.h{1}.Parent, 'gray'),
+
+%% Final save
+save_dir = 'Z:\Sherry\poseTrackingXL\training_files\Label3D\';
+save_file = 'AMB155_031025_inferred_sleap'; % good frames
+labelGui.savePath = fullfile(save_dir, save_file);
+labelGui.saveAll()
 
 %% Load the bad video frames
 % data params
-start_frame = 35500;
+start_frame = 0;
 nFrames = sum(bad_frame_idx);
 maxFrames = length(bad_frame_idx);
 all_frames = start_frame:(start_frame + maxFrames);
@@ -201,43 +217,30 @@ for cam_idx = 1:nCams
 end
 %% Makes a Label3D object and start the GUI (low conf)
 % To identify and correct failure modes
-%pts3d = permute(posture_preds, [1, 3, 2]);
-labelGui = Label3D(allParams, bad_videos, skeleton, 'defScale', .12);
+labelGui = Label3D(allParams, bad_videos, skeleton, 'defScale', 35);
 labelGui.loadFrom3D(pts3d(bad_frame_idx, :, :));
 colormap(labelGui.h{1}.Parent, 'gray'),
 
 %% Save as a training file
-save_dir = 'Z:\Isabel\data\training_data\';
-save_file = [session_dir, '_mistakes_manual']; % bad frames
+save_dir = 'Z:\Sherry\poseTrackingXL\training_files\Label3D\';
+save_file = 'AMB155_031025_inferred_mistake'; 
 labelGui.savePath = fullfile(save_dir, save_file);
 labelGui.saveAll()
 
-%% To load an existing training file
-training_file = [save_file, '.mat'];
-labelGui = Label3D(fullfile(save_dir, training_file), 'defScale', .12);
+%% To integrate adjusted points with the unmodified points and save again
+close all
+load(fullfile(save_dir, save_file));
+labelGui = Label3D(camParams, videos, skeleton, 'defScale', 35);
+pts3d = permute(results.posture_preds, [1, 3, 2]);
+bad_pts = pts3d(bad_frame_idx, :, :);
+bad_pts = reshape(bad_pts, 72, []);
+bad_pts(~isnan(data_3D)) = data_3D(~isnan(data_3D));
+labelGui.loadFrom3D(bad_pts);
 colormap(labelGui.h{1}.Parent, 'gray'),
 
-
-
-
-
-
-
-
-
-
-
-%%%% 
-%% Makes a Label3D object and start the GUI (high conf)
-% To confirm that high conf frames look good
-labelGui = Label3D(camParams, label_frames, skeleton, 'defScale', .12);
-% labelGui.loadFrom3D(data_3D)
-colormap(labelGui.h{1}.Parent, 'gray'),
-
-%%
-points_3d = labelGui.points3D;
-pts3d = points_3d;
-pts3d = reshape(pts3d, size(pts3d, 1), 3, []);
-pts3d = permute(pts3d, [3, 2, 1]);
-
+%% Final save
+save_dir = 'Z:\Sherry\poseTrackingXL\training_files\Label3D\';
+save_file = 'AMB155_031025_inferred_corrected_sleap'; % corrected frames
+labelGui.savePath = fullfile(save_dir, save_file);
+labelGui.saveAll()
 

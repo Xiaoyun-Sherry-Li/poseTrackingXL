@@ -1,29 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="81cf2095-24dd-41f5-b99b-cd940a763e19" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../NPYtoImages.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/createFaceDataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/createFaceDataset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../pySBA.py" beforeDir="false" afterPath="$PROJECT_DIR$/../pySBA.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../trackPosture_slp_XL.py" beforeDir="false" afterPath="$PROJECT_DIR$/../trackPosture_slp_XL.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../utils/slp_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/../utils/slp_utils.py" afterDir="false" />
-    </list>
+    <list default="true" id="1980889c-76e3-4100-8d07-2262f552d8a5" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
-  </component>
   <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 1
+  "associatedIndex": 2
 }]]></component>
-  <component name="ProjectId" id="2pv1djtrDrobI1ztNApxeWwHvct" />
+  <component name="ProjectId" id="2rVxooqkQoq29OJRAAzDqQwKHnG" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -31,10 +18,7 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL/faceNet",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
+    "last_opened_file_path": "C:/Users/xl313/OneDrive/Documents/GitHub/bird_pose_tracking/faceNet",
     "nodejs_package_manager_path": "npm",
     "vue.rearranger.settings.migration": "true"
   }
@@ -50,12 +34,12 @@
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="81cf2095-24dd-41f5-b99b-cd940a763e19" name="Changes" comment="" />
-      <created>1733631824880</created>
+      <changelist id="1980889c-76e3-4100-8d07-2262f552d8a5" name="Changes" comment="" />
+      <created>1736658220213</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1733631824880</updated>
-      <workItem from="1733631825889" duration="27000" />
+      <updated>1736658220213</updated>
+      <workItem from="1736658221252" duration="1000" />
     </task>
     <servers />
   </component>

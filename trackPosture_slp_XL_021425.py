@@ -4,6 +4,9 @@ sys.path.append("C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL/utils")
 sys.path.append("C:/Users/xl313/OneDrive/Documents/GitHub/bird_pose_tracking/faceNet")
 import numpy as np
 import tensorflow as tf
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress warnings and info, show only errors
+
 
 ''' set up for this run '''
 # set up GPUs
@@ -25,18 +28,18 @@ im_w = 2200
 im_h = 650
 # video params
 start_frame = 0 # in frames at 50fps # (XL, 010825: an exampler coconut caching/eating + drinking water snippet: 11:50 - 13:00 min in SLV123_110824_wEphys) 
-nFrames = 180000 # in frames at 50fps # takes 0.5 hour = 1 * 30 * 60 * 50
+nFrames = 480000 # in frames at 50fps # takes 2:40 hr = (2 * 60 + 40) * 60 * 50
 
 ''' UPDATE paths as needed '''
 # videos
-root_dir = "Z:/Sherry/poseTrackingXL/training_files/raw_acquisition_copy/"
-vid_root = f"{root_dir}RBY52_012025/"
+root_dir = "Z:/Sherry/acquisition/"
+vid_root = f"{root_dir}AMB155_031025/"
 # camera params
 cam_params = loadmat_sbx("Z:/Sherry/poseTrackingXL/calibration_files/all_opt_arrays/102324_negated_camParams")['camParams_negateR'] #['camParams']
 
 # to save
-pred_date = "021725"
-save_file = f'{pred_date}_posture_2stage_1h_face.npy' # python
+pred_date = "031025"
+save_file = f'{pred_date}_posture_face.npy' # python
 # save_file = f'{pred_date}_posture_2stage_faceNet.mat' # matlab
 save_path = f"{vid_root}{save_file}"
 #%%
