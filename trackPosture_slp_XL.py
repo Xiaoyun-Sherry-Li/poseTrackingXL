@@ -24,7 +24,7 @@ nFrames = 5 # in frames at 50fps # SHERRY: take only 100 frames, which is 2 sec
 ''' UPDATE paths as needed '''
 # videos
 root_dir = "Z:/Sherry/acquisition/"
-vid_root = f"{root_dir}AMB155_031025/"
+vid_root = f"{root_dir}RBY52_012225/"
 
 # camera params
 cam_param_dir = "Z:/Sherry/camera_calibration/"  

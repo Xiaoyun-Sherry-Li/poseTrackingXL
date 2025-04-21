@@ -36,7 +36,7 @@ def s5(inputs_shape=(128,128,1), data_augmentation=None, base_filters=25):
 
 
 ''' Multi-view weighted prediction model architectures '''
-def j4(inputs_shape=(128,128,6), viewMdl=s5()):
+def j4(inputs_shape=(128,128,4), viewMdl=s5()): # sherry change from 6 views to 4 views
     nViews = inputs_shape[-1]
     inputs = layers.Input(inputs_shape)
     allSlices = layers.Lambda(lambda z: tf.split(z, nViews, axis=-1))(inputs)

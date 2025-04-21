@@ -62,11 +62,8 @@ data_augmentation = Sequential(
     ]
 )
 viewMdl = fn.s5((128,128,1), data_augmentation)
-
- 
 # make joint prediction model
 jointMdl = fn.j4(inputs_shape, viewMdl)
-
 
 ''' Train/Validation Split '''
 validFrac = 0.1

@@ -10,8 +10,13 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import sys
 sys.path.append(r'C:\Users\xl313\OneDrive\Documents\GitHub\poseTrackingXL\faceNet')
-
-def s5(inputs_shape=(128,128,1), data_augmentation=None, base_filters=25):
+# import faceNetArchitectures as FNA
+#%%
+gpu = 0
+gpus = tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_visible_devices(gpus[gpu],'GPU')
+#%%
+def s6(inputs_shape=(128,128,3), data_augmentation=None, base_filters=25):
     inputs = keras.Input(inputs_shape)
     # normalize inputs
     x = preprocessing.Rescaling(scale=1. / 127.5, offset=-1.0)(inputs)
@@ -37,8 +42,7 @@ def s5(inputs_shape=(128,128,1), data_augmentation=None, base_filters=25):
     singleView_pred = layers.GlobalAveragePooling2D(name='view_features')(x)
     return keras.Model(inputs, singleView_pred)
 
-
-def j5(inputs_shape=(128, 128, 4), viewMdl=s5()):
+def j6(inputs_shape=(128, 128, 3, 4), viewMdl=s6()):
 
     feature_layer_num = [i for i, x in enumerate(viewMdl.layers) if x.name == 'view_features'][0] # retrieve the index of view_features layer
     feature_layer = viewMdl.layers[feature_layer_num]
@@ -63,12 +67,6 @@ def j5(inputs_shape=(128, 128, 4), viewMdl=s5()):
     joint_pred.trainable = False
 
     return keras.Model(inputs, joint_pred_out)
-
-#%%
-gpu = 0
-gpus = tf.config.experimental.list_physical_devices('GPU')
-tf.config.experimental.set_visible_devices(gpus[gpu],'GPU')
-
 #%%
 labelDir = "Z:\Sherry\poseTrackingXL\SeedCarryingLabeling\LabeledData"
 faceNetDir = r'C:\Users\xl313\OneDrive\Documents\GitHub\poseTrackingXL\faceNet'
@@ -85,7 +83,6 @@ for fn in allFn:
         tmp = loadmat(fn)
         allIms.append(tmp['allIms'][:, :, side_idx])
         allLabels.append(tmp['seedLabels'].flatten())
-
 #%%
 allIms = np.transpose(np.concatenate(allIms, axis=3), [3,0,1,2])
 allLabels = np.concatenate(allLabels, axis=0)
@@ -96,9 +93,12 @@ allLabels = allLabels[validLabels]
 nLabels = validLabels.sum()
 print(f'Total valid training data: {nLabels}')
 print(f'Numbers of "has seed" frames: {sum(allLabels)}')
-# recast data
 allIms = allIms.astype('float32')
 allLabels = allLabels.astype('float32')
+
+#%%
+allIms = np.repeat(allIms[:,:,:,np.newaxis,:], repeats = 3, axis=3)
+print("Shape of duplicated grayscale images: ", allIms.shape)
 
 #%%
 validFrac = 0.1
@@ -109,7 +109,7 @@ allValidInd = allInd[:nValid]
 classBalanceDict = {0:len(allTrainInd)/(allLabels[allTrainInd] == 0).sum()/2,
                    1:len(allTrainInd)/(allLabels[allTrainInd] == 1).sum()/2}
 print(classBalanceDict)
-
+#%%
 #define input layer
 inputs_shape = allIms.shape[1:]
 #train from a naive network (be sure to make all layers trainable in joint model!)
@@ -120,10 +120,10 @@ data_augmentation = Sequential(
         preprocessing.RandomRotation(factor=.1, fill_mode="reflect", interpolation="bilinear")
     ]
 )
-viewMdl = s5((128,128,1), data_augmentation)
+viewMdl = s6((128,128,3), data_augmentation)
 # viewMdl = FNA.s5((128,128,1), data_augmentation)
 # make joint prediction model
-jointMdl = j5([128,128,4], viewMdl)
+jointMdl = j6((128,128,3,4), viewMdl)
 
 # Train joint model
 ## maybe use learning rate 1e-3 when using j4 model?
@@ -140,28 +140,36 @@ stop_tr = tf.keras.callbacks.EarlyStopping(monitor="val_auc", mode="max", patien
 
 hist = jointMdl.fit(x=allIms[allTrainInd], y=allLabels[allTrainInd],
                     validation_data=(allIms[allValidInd], allLabels[allValidInd]),
-                    epochs=1000, batch_size=200, class_weight=classBalanceDict,
+                    epochs=1000, batch_size=50, class_weight=classBalanceDict,
                     callbacks=[reduce_lr, stop_tr]) # original batch size 200
-
-jointMdl.save(faceNetDir+'/j5-xl-041925.keras')
-viewMdl.save(faceNetDir+'/s5-xl-041925.keras')
-
+#%%
 # plot training history
 h = hist.history
 plt.plot(h['loss'][10:]),plt.plot(h['val_loss'][10:]),plt.show()
 plt.plot(h['auc'][10:]),plt.plot(h['val_auc'][10:]),plt.show()
-
 #%%
-# # select indices for display
-# testIndices = allValidInd
-#
-# # define new network with view-specific weights and make predictions
-# weights_layer = [l for l in jointMdl.layers if l.name=='view_weights'][0]
-# jp_layer = [l for l in jointMdl.layers if l.name=='joint_pred'][0]
-# predMdl = tf.keras.Model(inputs=jointMdl.input, outputs=[jp_layer.output, weights_layer.output])
-# val = predMdl.predict(allIms[testIndices], batch_size=100) # original batch size 200
-#
-# # show histogram of predicted values for true and false targets separately
-# jp = val[0].flatten()
-# plt.hist([jp[allLabels[testIndices]==0],jp[allLabels[testIndices]==1]],density=True),
-# plt.show(),
+# select indices for display
+testIndices = allValidInd
+
+# define new network with view-specific weights and make predictions
+weights_layer = [l for l in jointMdl.layers if l.name=='view_weights'][0]
+jp_layer = [l for l in jointMdl.layers if l.name=='joint_pred'][0]
+predMdl = tf.keras.Model(inputs=jointMdl.input, outputs=[jp_layer.output, weights_layer.output])
+val = predMdl.predict(allIms[testIndices], batch_size=100) # original batch size 200
+
+# # display 10 random images
+# for i in np.random.randint(len(testIndices), size=(10,1)):
+#     plt.imshow(valIms[i[0]], cmap='gray'),
+#     weightString = [str(v+1) + '-' + str(np.round(val[1][i,v], decimals=1)) for v in range(6)]
+#     weightString = ', '.join(weightString)
+#     plt.title('Score-' + str(np.round(val[0][i][0], decimals=3)) + ': ' + weightString),
+#     plt.show(),
+
+# show histogram of predicted values for true and false targets separately
+jp = val[0].flatten()
+plt.hist([jp[allLabels[testIndices]==0],jp[allLabels[testIndices]==1]],density=True),
+plt.show(),
+#%%
+
+jointMdl.save(faceNetDir+'/j4-xl-041625.keras')
+viewMdl.save(faceNetDir+'/s5-xl-041625.keras')

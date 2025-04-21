@@ -6,9 +6,10 @@ codePath = 'C:\Users\xl313\OneDrive\Documents\GitHub\Label3D';
 addpath(genpath(codePath))
 cd 'C:\Users\xl313\OneDrive\Documents\GitHub\bird_pose_tracking\training_files\Label3D'
 
-%% Set file paths and load results from SLEAP output 
-load('Z:\Sherry\acquisition\AMB155_031025\031025_posture_face.mat') % results
-vidPath = 'Z:\Sherry\acquisition\AMB155_031025';
+%% [change this] Set file paths and load results from SLEAP output 
+vidPath = 'Z:\Sherry\acquisition\RBY52_2ndPart_012425'; % behavioral session
+% load(fullfile(vidPath, '032325_posture_face.mat')); % results
+load(fullfile(vidPath,'behavioral_data\posture_pos_smooth_032325.mat')); % load the smoothed version
 
 %% Read in and reformat camera parameter array
 load('Z:\Sherry\camera_calibration\092124_camOptArrayDA_XL.mat')
@@ -63,14 +64,22 @@ skeleton.color = lines(length(skeleton.joints_idx)); % 15 body parts -> 15 disti
 % skeleton.joints_idx = [[1,1];[2,2];[3,3]];
 % skeleton.color = lines(length(skeleton.joints_idx));
 
-%% load selected frames for making a sanity check video
+%% [optional] load selected frames for making a sanity check video
 % 28-35 sec 
 FPS = 50;
-predStart = 28; % in seconds 
-predFrames = 7 * FPS; % duration, in frames 
-predIdx = predStart * FPS : predStart * FPS + predFrames - 1;
+% predStart = 28; % in seconds 
+% predFrames = 7 * FPS; % duration, in frames 
+% predIdx = predStart * FPS : predStart * FPS + predFrames - 1;
 
-%% read in frames
+load(fullfile(vidPath,"annotatedSeeds.mat"));
+[cacheInteractions, cacheSiteID] = find(annotatedSeeds.seedChanges == 1);
+% find the start & end frame idx of caches and retrievals
+cacheOnsetFrame = annotatedSeeds.countData.newSite(cacheInteractions); % frame idx for start of site interactions 
+cacheOffsetFrame = annotatedSeeds.countData.endSite(cacheInteractions); % frame idx for end of site interactions 
+predFrames = cacheOffsetFrame(2) - cacheOnsetFrame(2) + 1;
+predIdx = cacheOnsetFrame(2):cacheOffsetFrame(2); % tmp, to visualise frames during cache interaction 
+
+% read in frames
 predVid = cell(nCams,1);
 for cam_idx = 1:nCams
     disp(camNames(cam_idx))
@@ -89,7 +98,7 @@ end
 %% SC's view3d 
 close all
 viewGui = View3D(allParams, predVid, skeleton);
-viewGui.defScale= 35;
+viewGui.defScale= 40;
 colormap(viewGui.h{1}.Parent, 'gray');
 
 % Load COM Data (uncomment next line, comment the next session to produce comNet keypoint predictions video)
@@ -97,12 +106,14 @@ colormap(viewGui.h{1}.Parent, 'gray');
 % viewGui.loadFrom3D(pts3d_com(predIdx, :, :));
 
 % Load Posture Data
-pts3d_posture = permute(results.posture_preds, [1, 3, 2]);
+% pts3d_posture = permute(results.posture_preds, [1, 3, 2]);
+pts3d_posture = permute(pos_pts_smooth, [1, 3, 2]);
 viewGui.loadFrom3D(pts3d_posture(predIdx, :, :));
 
-%% (Optional) Create a video 
-cd 'Z:\Sherry\acquisition\AMB155_031025\behavioral_data'  
-v = VideoWriter('raw_pred','MPEG-4');
+
+%% Create a video 
+% cd 'Z:\Sherry\acquisition\RBY52_2ndPart_012425'  
+v = VideoWriter(fullfile(vidPath,'2ndCache_smoothed'),'MPEG-4');
 v.Quality=95;
 v.FrameRate = 10;
 v.open,
@@ -110,10 +121,10 @@ for i = 1:predFrames
     viewGui.setFrame(i);
     viewGui.triangulateView();
     viewGui.resetAspectRatio();
-    % Grab the image
     F = getframe(viewGui.Parent); % grab a frame from viewGUI.Parent - a handle to an axis
     v.writeVideo(F.cdata);
 end
+
 v.close
 
 %%  the following sessions identify good and bad individual frames

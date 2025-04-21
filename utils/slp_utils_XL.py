@@ -182,6 +182,7 @@ class posture_tracker:
                     nParts=15, nCOMs=3, com_body_ind=1,
                     com_model=None, posture_model=None, face_model=None,
                     face_w3d=20, com_head_ind=0, face_crop_size=(128,128)):
+                    # cocoNet = None,
         # original face_w3d value: 0.08
         # input a list of video reader objects
         self.readers = readers
@@ -191,6 +192,7 @@ class posture_tracker:
         self.com_model = com_model
         self.posture_model = posture_model
         self.face_model = face_model
+        # self.cocoNet = cocoNet
         self.ds_fac = ds_fac
         self.ds_size = (2200//ds_fac, 650//ds_fac) # UPDATE to match your image size in pixels # updated by XL
         self.w3d = w3d
@@ -380,6 +382,7 @@ class posture_tracker:
         com_mdl = slp_load([self.com_model], peak_threshold=0)
         posture_mdl = slp_load([self.posture_model], peak_threshold=0)
         face_mdl = self.face_model
+        # cocoNet = self.cocoNet
 
         ''' Collect camera parameters '''
         print('Collecting Camera Parameters')
@@ -405,6 +408,7 @@ class posture_tracker:
         postureConf = []
         rawPosturePreds = []
         facePreds = []
+        # cocoPreds = []
 
         # preallocate image arrays
         ds_img = np.full((self.nCams, self.ds_size[1], self.ds_size[0], 3), 0, dtype='uint8')  # SHERRY: the last dimension used to be 1, needs to make it 3
@@ -525,9 +529,6 @@ class posture_tracker:
                 camScale = self.camParams[:, 6] / camDist  # convert to focal length divided by distance
                 half_width = camScale * self.face_w3d
 
-                # save the cropped image for each camera
-                # min_ind = np.full((self.nCams, 1, 2), np.NaN)
-                # crop_scale = np.full((self.nCams, 1, 2), np.NaN)
                 for nCam in range(self.nCams):
                     thisCom = np.maximum(head_reproj[nCam], 0)
                     thisCom[0] = np.minimum(thisCom[0], full_img[nCam].shape[1])  # x limit is shape[1]
@@ -537,14 +538,20 @@ class posture_tracker:
                                                                   thisCom,
                                                                   thisHalfWidth,
                                                                   self.face_crop_size)
-                    '''face_img is RGB 3 channels, but the face_mdl was trained on 1 channel black and white images, so need to convert'''
+
+                    # face_img is RGB 3 channels, but the face_mdl was trained on 1 channel black and white images, so need to convert
                     face_img_gray[0,:, :,nCam] = (
                             0.2989 * face_img_rgb[:, :, 0, nCam] +  # Red channel
                             0.5870 * face_img_rgb[:, :, 1, nCam] +  # Green channel
                             0.1140 * face_img_rgb[:, :, 2, nCam]  # Blue channel
                     )
+                # if cocoNet is not None:
+                #     thisCocoPred = cocoNet.predict(face_img_rgb)
+                #     cocoPreds.append(thisCocoPred.copy())
+                # else:
+                #     cocoPreds.append(None)
                 # make prediction on multichannel head data
-                thisPrediction = face_mdl.predict_on_batch(face_img_gray)
+                thisPrediction = face_mdl.predict_on_batch(face_img_gray) # tmp introduce batch size
                 facePreds.append(thisPrediction.copy())
             else:
                 facePreds.append(None)
@@ -560,6 +567,7 @@ class posture_tracker:
                 'posture_conf':np.stack(postureConf),
                 'read_status': stopReading,
                 'face_preds': np.stack(facePreds)}
+                # 'coco_preds': np.stack(cocoPreds)}
                 # 'unseen_images':full_img_sleap,
                 # 'sleap_raw_predicted_points_scale_back': raw_posture,
                 # 'cropped_unseen_images':crop_img} # SHERRY added the sleap raw output
