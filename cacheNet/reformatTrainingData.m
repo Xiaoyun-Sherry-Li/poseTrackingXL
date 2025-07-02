@@ -10,10 +10,10 @@ data_dir = 'C:\Users\xl313\OneDrive\Documents\GitHub\bird_pose_tracking\training
 addpath(genpath(data_dir))
 
 % save file
-save_file = 'botAnnotations_resized8_030325.mat';
+save_file = 'botAnnotations_resized20_030325.mat';
 
 % define image size
-site_half_w = 8; % XL is 8, IL is 15 
+site_half_w = 20; % XL is 20, IL is 15 
 site_w = site_half_w*2 + 1;
 
 %% load the data

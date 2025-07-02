@@ -123,36 +123,6 @@ def resize_and_pad_rows(img, ds_size):
         ds_img = np.concatenate((ds_img,fill_row), axis=0)
     return ds_img
 
-# def crop_from_com(img, centroid, half_width, crop_size = (500,500)):
-#     '''
-#     Crops an image around a given centroid (crop dims defined by half_width)
-#     and resizes to the specified crop_size.
-#     '''
-#     ctr = np.round(centroid).astype(int)
-#     half_width = np.round(half_width).astype(int)
-#     img_h,img_w = img.shape[0],img.shape[1]
-#     xmin = np.min([np.max([ctr[0] - half_width, 0]), img_w - 100])
-#     xmax = np.max([np.min([ctr[0] + half_width + 100, img_w]), 100])
-#     ymin = np.min([np.max([ctr[1] - half_width, 0]), img_h - 100])
-#     ymax = np.max([np.min([ctr[1] + half_width + 100, img_h]), 100])
-#
-#     # crop_img = cv2.resize(img[ymin:ymax, xmin:xmax], crop_size, cv2.INTER_AREA)
-#     # ctr = np.round(body_ctr).astype(int)
-#     # half_width = np.round(half_width).astype(int)
-#     # img_h,img_w = img.shape[0],img.shape[1]
-#     # xmin = np.min([np.max([ctr[0] - half_width - 100, 0]), img_w - 100])
-#     # xmax = np.max([np.min([ctr[0] + half_width + 100, img_w]), 100])
-#     # ymin = np.min([np.max([ctr[1] - half_width -100, 0]), img_h - 100])
-#     # ymax = np.max([np.min([ctr[1] + half_width + 100, img_h]), 100])
-# #crop_img = cv2.resize(images[4][0:419,387:1007], crop_size, cv2.INTER_AREA)
-#     crop_img = cv2.resize(img[ymin:ymax, xmin:xmax], crop_size, cv2.INTER_AREA)
-#     #crop_img = cv2.resize(img[0:419,387:1007], crop_size, cv2.INTER_AREA)
-#     min_ind = np.array([xmin, ymin])
-#     max_ind = np.array([xmax, ymax])
-#     crop_scale = crop_size / (max_ind - min_ind)
-#
-#     return crop_img, min_ind, crop_scale
-
 def crop_from_com(img, centroid, half_width, crop_size=(500, 500)): # used to be 320, 320
     '''
     Crops an image around a given centroid (crop dims defined by half_width)
@@ -290,8 +260,7 @@ class posture_tracker:
             full_img = []
             for nCam in range(self.nCams):
                 flag, img = self.readers[nCam].read()
-                img = cv2.cvtColor(img, ### SHERRY: temporaily disable it
-                                  cv2.COLOR_BGR2RGB)  # SHERRY added this bcs cv2 image reader reads in BGR, need to convert to RGB to read in the images correctly
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # SHERRY added this bcs cv2 image reader reads in BGR, need to convert to RGB to read in the images correctly
 
                 if nFrame < start_frame:
                     continue
@@ -439,6 +408,8 @@ class posture_tracker:
             full_img = []
             for nCam in range(self.nCams):
                 flag, img = self.readers[nCam].read() # a list of video readers (one for each camera); .read() read the next frame from the video. The output "flag" indicates if the read is successful, the output "img" is the actual image read.
+                if img is None:
+                    print(f"Failed to read frame {nFrame} from camera {nCam}")
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # SHERRY added this bcs cv2 image reader reads in BGR, need to convert to RGB to read in the images correctly
                 if nFrame < start_frame:
                     continue # skip frames before indicated start_frame
@@ -540,10 +511,16 @@ class posture_tracker:
                                                                   self.face_crop_size)
 
                     # face_img is RGB 3 channels, but the face_mdl was trained on 1 channel black and white images, so need to convert
+                    # face_img_gray[0,:, :,nCam] = (
+                    #         0.2989 * face_img_rgb[:, :, 0, nCam] +  # Red channel
+                    #         0.5870 * face_img_rgb[:, :, 1, nCam] +  # Green channel
+                    #         0.1140 * face_img_rgb[:, :, 2, nCam]  # Blue channel
+                    # )
+                    # 043025: XL tmp changes to emphasize blue channels
                     face_img_gray[0,:, :,nCam] = (
-                            0.2989 * face_img_rgb[:, :, 0, nCam] +  # Red channel
-                            0.5870 * face_img_rgb[:, :, 1, nCam] +  # Green channel
-                            0.1140 * face_img_rgb[:, :, 2, nCam]  # Blue channel
+                            0.1 * face_img_rgb[:, :, 0, nCam] +  # Red channel
+                            0.2 * face_img_rgb[:, :, 1, nCam] +  # Green channel
+                            0.7 * face_img_rgb[:, :, 2, nCam]  # Blue channel
                     )
                 # if cocoNet is not None:
                 #     thisCocoPred = cocoNet.predict(face_img_rgb)

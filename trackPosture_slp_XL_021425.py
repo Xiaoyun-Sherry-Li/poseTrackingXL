@@ -7,7 +7,7 @@ import tensorflow as tf
 import cProfile
 import pstats
 import os
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress warnings and info, show only errors
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress warnings and info, show only errors
 
 ''' set up for this run '''
 # set up GPUs
@@ -23,31 +23,30 @@ from slp_utils_XL import posture_tracker, create_slp_project, crop_from_com
 import scipy.io
 #%%
 ''' UPDATE data params as appropriate'''
+nFrames = 210 * 60 * 50  # in frames at 50fps # takes 1 min total 178mins
+# videos
+root_dir = "Z:/Sherry/acquisition/"
+vid_root = f"{root_dir}AMB151_010725/"
+# to save
+pred_date = "070125"
+
 # cam params
 cam_ids = ['blue_cam', 'green_cam', 'red_cam', 'yellow_cam'] # check the input order
 im_w = 2200
 im_h = 650
 # video params
 start_frame = 0 # in frames at 50fps # (XL,SLV123_110824_wEphys, 5m - 1h35m)
-nFrames = 1500  # in frames at 50fps # takes 1 min
-
-''' UPDATE paths as needed '''
-# videos
-root_dir = "Z:/Sherry/acquisition/"
-vid_root = f"{root_dir}LVN4_040725/"
 # camera params
 cam_params = loadmat_sbx("Z:/Sherry/poseTrackingXL/calibration_files/all_opt_arrays/102324_negated_camParams")['camParams_negateR'] #['camParams']
 
-# to save
-pred_date = "042025_test"
 save_file_py = f'{pred_date}_posture.npy' # python
 save_file_mat = f'{pred_date}_posture.mat' # matlab
 save_path_py = f"{vid_root}{save_file_py}"
 save_path_mat = f"{vid_root}{save_file_mat}"
 #%%
 # models
-comNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/032225250322_000322.single_instance.n=752"
-postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/032225250322_002442.single_instance.n=752"
+comNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/comNet250430_222637.single_instance.n=1684"
+postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/posture250430_230225.single_instance.n=1684"
 faceNet = "C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL/faceNet/j5-xl-041925.keras"
 # cocoNet = "C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL/faceNet/cocoNet-041725.keras"
 
@@ -69,28 +68,24 @@ for i in range(len(cam_ids)):
     print(cam)
     camPath = f"{vid_root}{cam}.avi"
     # define the video reader obj and settings
-    api_id = cv2.CAP_FFMPEG
-    reader = cv2.VideoCapture(camPath, api_id)
+    # api_id = cv2.CAP_FFMPEG
+    # reader = cv2.VideoCapture(camPath, api_id) # 063025: sherry commented it out to debug failed to read frame in a session
+    reader = cv2.VideoCapture(camPath)
     if start_frame > 0:
-        reader.set(cv2.CAP_PROP_FRAME_COUNT, start_frame)
+        # reader.set(cv2.CAP_PROP_FRAME_COUNT, start_frame) # 063025: sherry commented it out to debug failed to read frame in a session
+        reader.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
     all_readers.append(reader)
+
 #%%
 ''' track posture '''
 obj = posture_tracker(all_readers, cam_params,
                         com_model=comNet,
                         posture_model=postureNet,
-                        face_model=face_model)
+                        face_model = face_model)
                         # cocoNet = None)
 
 results = obj.track_video(start_frame=start_frame,
                             nFrames=nFrames)
-cProfile.run(
-    "results = obj.track_video(start_frame=start_frame, nFrames=nFrames)",
-    "profile_stats.prof")
-stats = pstats.Stats("profile_stats.prof")
-stats.strip_dirs()  # Optional, to clean up long directory paths in the output
-stats.sort_stats("cumulative")  # Sort by cumulative time
-stats.print_stats()
 
 #%%
 ''' save file '''

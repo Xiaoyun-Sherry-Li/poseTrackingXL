@@ -2,60 +2,55 @@
 close all,
 clear all,
 
-% TODO possibly won't need parts of this...see what is needed after using 
-% up to date annotation GUI
-
-% allData = cat(1,load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_TRQ177_210318.mat'),...
-%     load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_IND88_210401.mat'),...
-%     load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_LIM99_210503.mat'),...
-%     load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_IND106_220701.mat'),...
-%     load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_IND106_220705.mat'),...
-%     load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_TRQ66_220728.mat'),...
-%     load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_AMB43_221103.mat'),...
-%     load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_LMN169_221104.mat'),...
-%     load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_SLV121_20240513_104112.mat'),...
-%     load('Z:\Selmaan\Seed Carrying Labeling\bottomCamera\botAnnotations_SLV121_20240515_140344.mat'));
-% 
-% format input data
-% for i=1:length(allData)
-%     if size(allData(i).preIms,3)~=2
-%         allData(i).preIms = permute(repmat(allData(i).preIms,1,1,1,2),[1,2,4,3]);
-%         allData(i).postIms = permute(repmat(allData(i).postIms,1,1,1,2),[1,2,4,3]);
-%     end
-% end
-% preIms = cat(4, allData.preIms);
-% postIms = cat(4, allData.postIms);
-% prePreds = cat(1, allData.prePreds)>1/2;
-% postPreds = cat(1, allData.postPreds)>1/2;
-% nPairs = size(postIms,4);
-% assert(nPairs == size(preIms,4)),
-% take only 2nd channel (present image, ignore baseline image)
-% preIms = preIms(:,:,2,:);
-% postIms = postIms(:,:,2,:);
-
+%% TODO possibly won't need parts of this...see what is needed after using 
 % set paths
-root_dir = 'C:\Users\xl313\OneDrive\Documents\GitHub\bird_pose_tracking\';
-data_dir = strcat(root_dir, 'training_files\cache_annotations\');
-data_file = 'botAnnotations_resized8_030325.mat';
+data_dir = 'Z:\Sherry\poseTrackingXL\cacheNet\bottomCamera\';
+
+%% 11242 labels from Selmaan
+allData = cat(1,load("Z:\Sherry\poseTrackingXL\cacheNet\bottomCamera\botAnnotations_AMB43_221103.mat"),... % 3619
+load("Z:\Sherry\poseTrackingXL\cacheNet\bottomCamera\botAnnotations_LMN169_221104.mat"),... % 1298
+load("Z:\Sherry\poseTrackingXL\cacheNet\bottomCamera\botAnnotations_TRQ66_220728.mat"),... % 3407 (2D)
+load("Z:\Sherry\poseTrackingXL\cacheNet\bottomCamera\botAnnotations_IND106_220705.mat"),... % 1728 (2D)
+load("Z:\Sherry\poseTrackingXL\cacheNet\bottomCamera\botAnnotations_IND106_220701.mat"),... % 1190 (3rd label is wrong))
+load("Z:\Sherry\acquisition\AMB155_031025\botAnnotations_AMB155_031025_curated.mat"),...
+load("Z:\Sherry\acquisition\LVN4_040725\botAnnotations_LVN4_040725_curated.mat"));
+
+%% checking data
+% close all, 
+% clear all
+% load("Z:\Sherry\acquisition\AMB155_031025\botAnnotations_AMB155_031025_curated.mat");
+% % load("Z:\Sherry\acquisition\LVN4_040725\botAnnotations_LVN4_040725_curated.mat")
+% start = 1;
+% n = 25;
+% for i = start: start + n-1
+%     subplot(5, 5, i-start+1); 
+%     imshow(preIms(:,:,i));
+%     title(sprintf('%.4f', prePreds(i)));
+% end
+%%
+for i=1:length(allData)
+    if size(allData(i).preIms,3) == 2
+        allData(i).preIms = squeeze(allData(i).preIms(:,:,2,:));
+        allData(i).postIms = squeeze(allData(i).postIms(:,:,2,:));
+    end
+end
+
+%% 
+prePreds = cat(1, allData.prePreds)>1/2;
+postPreds = cat(1, allData.postPreds)>1/2;
+preIms = cat(3, allData.preIms);
+postIms = cat(3, allData.postIms);
+preIms = reshape(preIms,[size(preIms,1), size(preIms,2),1,size(preIms,3)]);
+postIms = reshape(postIms,[size(postIms,1), size(postIms,2),1,size(postIms,3)]);
+nPairs = size(postIms,4);
+assert(nPairs == size(preIms,4)),
+sum(prePreds)
+sum(postPreds)
+%%
+data_file = 'padded25.mat';
+root_dir = 'C:\Users\xl313\OneDrive\Documents\GitHub\poseTrackingXL\';
 save_dir = strcat(root_dir, 'cacheNet\');
 save_file = strrep(save_dir + "cacheNet_" + string(datenum(datetime)),'.','_');
-
-% load the data
-load(fullfile(data_dir, data_file))
-
-% add an extra channel to the images
-if size(preIms, 3)~=2
-    preIms = permute(repmat(preIms,1,1,1,2),[1,2,4,3]);
-    postIms = permute(repmat(postIms,1,1,1,2),[1,2,4,3]);
-end
-preIms = preIms(:,:,2,:);
-postIms = postIms(:,:,2,:);
-
-% reformat and get file info
-prePreds = prePreds > 1/2;
-postPreds = postPreds > 1/2;
-nPairs = size(postIms, 4);
-assert(nPairs == size(preIms, 4)),
 
 %% format the data for the cacheNet
 % split into train/validation 
