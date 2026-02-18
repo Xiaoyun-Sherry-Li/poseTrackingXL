@@ -7,11 +7,11 @@ addpath(genpath(codePath))
 cd 'C:\Users\User\Documents\GitHub\Label3D'
 
 % [change this] Set file paths and load results from SLEAP output 
-vidPath = 'Z:\Sherry\acquisition\ROS100_02022026'; % behavioral session
-load(fullfile(vidPath, 'raw_021026.mat'));
+vidPath = 'Z:\Sherry\acquisition\\ROS100_01262026_ephys1'; % behavioral session
+load(fullfile(vidPath, 'raw_02182026_newModel.mat'));
 
 %% visualise comNet performances
-frames = 90000: size(results.com_conf,1);
+frames = 11*60*50: 20*60*50; %size(results.com_conf,1);
 figure;
 lw_hist = 1.5;                        
 nbins = 100;                      
@@ -163,7 +163,7 @@ for node_idx = 1:n_keypoints
     end
 end
 
-%% com or posture skeletons 
+% com or posture skeletons 
 % posture skeleton
 skeleton.joints_idx = repmat(joint_idx, 2, 1);
 skeleton.color = lines(length(skeleton.joints_idx)); % 15 body parts -> 15 distinct colors
@@ -177,7 +177,7 @@ skeleton.color = lines(length(skeleton.joints_idx)); % 15 body parts -> 15 disti
 % predStart = 1; % in seconds % successful retrieval detection 
 % predFrames = 50 % 1* reader.FrameRate; % duration, in frames 
 % predIdx = predStart * reader.FrameRate : predStart * reader.FrameRate + predFrames - 1;
-predIdx = 23250:23500;
+predIdx = (14*60 + 30)*50:(14*60+45)*50;
 % load(fullfile(vidPath,"annotatedSeeds.mat"));
 % [cacheInteractions, cacheSiteID] = find(annotatedSeeds.seedChanges == 1);
 % % find the start & end frame idx of caches and retrievals
@@ -219,7 +219,7 @@ viewGui.loadFrom3D(pts3d_posture(predIdx, :, :));
 
 %% Create a video 
 % cd 'Z:\Sherry\acquisition\RBY52_2ndPart_012425'  
-v = VideoWriter(fullfile(vidPath,'test012626'),'MPEG-4');
+v = VideoWriter(fullfile(vidPath,'test021826'),'MPEG-4');
 v.Quality=95;
 v.FrameRate = 10;
 v.open,
@@ -239,13 +239,13 @@ avg_conf = median(results.posture_conf(frames,noTail), 2);
 
 figure; subplot(1,2,1); hist(avg_rep_err); hold on; subplot(1,2,2); hist(avg_conf);
 
-high_rep_err = avg_rep_err > 4; % used to be 99.9
+high_rep_err = avg_rep_err > 5; % used to be 99.9
 low_conf = avg_conf < 0.6; % used to be 0.1
 bad_frame_idx = high_rep_err & low_conf;
 
 %% Load the bad video frames
 % data params
-nSampledFrames = 60;
+nSampledFrames = 40;
 frame_idx = frames(bad_frame_idx);
 sampled_frame_idx = frame_idx(round(linspace(1,size(frame_idx,2),nSampledFrames)));
 
@@ -277,8 +277,8 @@ labelGui.loadFrom3D(pts3d(sampled_frame_idx, :, :));
 colormap(labelGui.h{1}.Parent, 'gray'),
 
 %% Save as a training file
-save_file = 'ROS100_020226'; 
-draft = [save_file '_draft_v2'];
+save_file = 'ROS100_01282026_E2'; 
+draft = [save_file '_draft'];
 save_dir = 'Z:\Sherry\poseTrackingXL\training_files\Label3D\';
 labelGui.savePath = fullfile(save_dir, draft);
 labelGui.saveAll()
@@ -298,7 +298,8 @@ data_3D = bad_pts;
 % don't close before saving! 
 
 %% Final save
-save(fullfile(save_dir, [save_file 'nFrame' num2str(size(data_3D,1))]), "camParams", "videos", "data_3D", "skeleton")
+% save(fullfile(save_dir, [save_file 'nFrame' num2str(size(data_3D,1)) '_videos']), "camParams", "videos", "data_3D", "skeleton", '-v7.3')
+save(fullfile(save_dir, 'ROS100_020226nFrame60_v73_videos'), "camParams", "videos", "data_3D", "skeleton", '-v7.3')
 
 %% test again (optional) 
 close all
