@@ -1,4 +1,6 @@
 %% Check and relabel inferred frames for a semi-manual training set
+% this function visualises the predicted keypoints overlaying on the video
+% frames 
 clear all
 close all;
 clc
@@ -7,11 +9,11 @@ addpath(genpath(codePath))
 cd 'C:\Users\User\Documents\GitHub\Label3D'
 
 % [change this] Set file paths and load results from SLEAP output 
-vidPath = 'Z:\Sherry\acquisition\\ROS100_01262026_ephys1'; % behavioral session
-load(fullfile(vidPath, 'raw_02182026_newModel.mat'));
+vidPath = 'Z:\Sherry\acquisition\LIM130_031626_E1'; % behavioral session
+load(fullfile(vidPath, 'raw_pred_031626.mat'));
 
 %% visualise comNet performances
-frames = 11*60*50: 20*60*50; %size(results.com_conf,1);
+frames = 1: size(results.com_conf,1);% 58*60*50: 59*60*50; %size(results.com_conf,1);
 figure;
 lw_hist = 1.5;                        
 nbins = 100;                      
@@ -58,17 +60,17 @@ title('Reprojection Error (100%)');
 xlabel('Error (pixels)');
 hold off;
 
-% PostureNet evaluation
-idx      = [1 11 15 12 14 10 7];
-labels   = {'topBeak','left foot','right foot','rightEye','right ankle','left ankle','tail tip'};
+%% PostureNet evaluation
+idx      = [1 ]%11 15 12 14 10 7];
+labels   = {'topBeak'}%,'left foot','right foot','rightEye','right ankle','left ankle','tail tip'};
 colors   = [ ...
-    0   0.5 1;   % topBeak
-    1   0   0;   % left foot
-    0   0   1;   % right foot
-    1   1   0;   % rightEye
-    1   0.5 0;   % right ankle
-    0.5 1   0;
-    0   0   0];  % left ankle
+    0   0.5 1;]   % topBeak
+    % 1   0   0;   % left foot
+    % 0   0   1;   % right foot
+    % 1   1   0;   % rightEye
+    % 1   0.5 0;   % right ankle
+    % 0.5 1   0;
+    % 0   0   0];  % left ankle
 
 % 1) Model confidence
 figure
@@ -177,7 +179,7 @@ skeleton.color = lines(length(skeleton.joints_idx)); % 15 body parts -> 15 disti
 % predStart = 1; % in seconds % successful retrieval detection 
 % predFrames = 50 % 1* reader.FrameRate; % duration, in frames 
 % predIdx = predStart * reader.FrameRate : predStart * reader.FrameRate + predFrames - 1;
-predIdx = (14*60 + 30)*50:(14*60+45)*50;
+predIdx = 85600: 85900;%(14*60 + 30)*50:(14*60+45)*50;
 % load(fullfile(vidPath,"annotatedSeeds.mat"));
 % [cacheInteractions, cacheSiteID] = find(annotatedSeeds.seedChanges == 1);
 % % find the start & end frame idx of caches and retrievals
@@ -214,12 +216,11 @@ colormap(viewGui.h{1}.Parent, 'gray');
 
 % Load Posture Data
 pts3d_posture = permute(results.posture_preds, [1, 3, 2]);
-% pts3d_posture = permute(pos_pts_smooth, [1, 3, 2]);
 viewGui.loadFrom3D(pts3d_posture(predIdx, :, :));
 
 %% Create a video 
 % cd 'Z:\Sherry\acquisition\RBY52_2ndPart_012425'  
-v = VideoWriter(fullfile(vidPath,'test021826'),'MPEG-4');
+v = VideoWriter(fullfile(vidPath,'raw100000_200frames_021826'),'MPEG-4');
 v.Quality=95;
 v.FrameRate = 10;
 v.open,
@@ -240,12 +241,12 @@ avg_conf = median(results.posture_conf(frames,noTail), 2);
 figure; subplot(1,2,1); hist(avg_rep_err); hold on; subplot(1,2,2); hist(avg_conf);
 
 high_rep_err = avg_rep_err > 5; % used to be 99.9
-low_conf = avg_conf < 0.6; % used to be 0.1
+low_conf = avg_conf < 0.7; % used to be 0.1
 bad_frame_idx = high_rep_err & low_conf;
 
 %% Load the bad video frames
 % data params
-nSampledFrames = 40;
+nSampledFrames = 30;
 frame_idx = frames(bad_frame_idx);
 sampled_frame_idx = frame_idx(round(linspace(1,size(frame_idx,2),nSampledFrames)));
 
@@ -277,7 +278,7 @@ labelGui.loadFrom3D(pts3d(sampled_frame_idx, :, :));
 colormap(labelGui.h{1}.Parent, 'gray'),
 
 %% Save as a training file
-save_file = 'ROS100_01282026_E2'; 
+save_file = 'AMB156_040726_nF30'; 
 draft = [save_file '_draft'];
 save_dir = 'Z:\Sherry\poseTrackingXL\training_files\Label3D\';
 labelGui.savePath = fullfile(save_dir, draft);
@@ -299,7 +300,7 @@ data_3D = bad_pts;
 
 %% Final save
 % save(fullfile(save_dir, [save_file 'nFrame' num2str(size(data_3D,1)) '_videos']), "camParams", "videos", "data_3D", "skeleton", '-v7.3')
-save(fullfile(save_dir, 'ROS100_020226nFrame60_v73_videos'), "camParams", "videos", "data_3D", "skeleton", '-v7.3')
+save(fullfile(save_dir, 'AMB156_040726nFrame26_v73_videos'), "camParams", "videos", "data_3D", "skeleton", '-v7.3')
 
 %% test again (optional) 
 close all
