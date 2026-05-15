@@ -180,7 +180,7 @@ skeleton.color = lines(length(skeleton.joints_idx)); % 15 body parts -> 15 disti
 % predStart = 1; % in seconds % successful retrieval detection 
 % predFrames = 50 % 1* reader.FrameRate; % duration, in frames 
 % predIdx = predStart * reader.FrameRate : predStart * reader.FrameRate + predFrames - 1;
-predIdx = 5500: 5550;%(14*60 + 30)*50:(14*60+45)*50;
+predIdx = 64650: 65050;%(14*60 + 30)*50:(14*60+45)*50;
 % load(fullfile(vidPath,"annotatedSeeds.mat"));
 % [cacheInteractions, cacheSiteID] = find(annotatedSeeds.seedChanges == 1);
 % % find the start & end frame idx of caches and retrievals
@@ -208,7 +208,7 @@ end
 %% SC's view3d 
 close all
 viewGui = View3D(allParams, predVid, skeleton);
-viewGui.defScale= 45; 
+viewGui.defScale= 40; 
 colormap(viewGui.h{1}.Parent, 'gray');
 
 % Load COM Data (uncomment next line, comment the next session to produce comNet keypoint predictions video)
@@ -221,7 +221,7 @@ viewGui.loadFrom3D(pts3d_posture(predIdx, :, :));
 
 %% Create a video 
 % cd 'Z:\Sherry\acquisition\RBY52_2ndPart_012425'  
-v = VideoWriter(fullfile(vidPath,'rawAMB156_cache_1200_1400'),'MPEG-4');
+v = VideoWriter(fullfile(vidPath,'raw100000_200frames_021826'),'MPEG-4');
 v.Quality=95;
 v.FrameRate = 10;
 v.open,

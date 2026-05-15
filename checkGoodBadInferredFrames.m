@@ -212,6 +212,7 @@ pts3d = permute(results.posture_preds, [1, 3, 2]);
 good_pts = pts3d(good_frame_idx, :, :);
 labelGui.loadFrom3D(good_pts);
 colormap(labelGui.h{1}.Parent, 'gray'),
+
 %% the modified points will them be automatically saved as data. To merged
 % with postureNet output and visualise them: open the automatically saved
 % files 

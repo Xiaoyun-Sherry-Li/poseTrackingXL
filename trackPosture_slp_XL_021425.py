@@ -23,19 +23,20 @@ from slp_utils_XL import posture_tracker, create_slp_project, crop_from_com
 import scipy.io
 #%%
 ''' UPDATE data params as appropriate'''
-nFrames = 210 * 60 * 50  # in frames at 50fps # takes 1 min total 178mins
+nFrames = 1 * 60 * 50  # in frames at 50fps # takes 1 min total 178mins
 # videos
 root_dir = "Z:/Sherry/acquisition/"
-vid_root = f"{root_dir}AMB151_010725/"
+vid_root = f"{root_dir}AMB151_071025/"
 # to save
-pred_date = "070125"
+pred_date = "new_081525"
+# video params
+start_frame = 0 # in frames at 50fps # (XL,SLV123_110824_wEphys, 5m - 1h35m)
 
 # cam params
 cam_ids = ['blue_cam', 'green_cam', 'red_cam', 'yellow_cam'] # check the input order
 im_w = 2200
 im_h = 650
-# video params
-start_frame = 0 # in frames at 50fps # (XL,SLV123_110824_wEphys, 5m - 1h35m)
+
 # camera params
 cam_params = loadmat_sbx("Z:/Sherry/poseTrackingXL/calibration_files/all_opt_arrays/102324_negated_camParams")['camParams_negateR'] #['camParams']
 
@@ -45,8 +46,10 @@ save_path_py = f"{vid_root}{save_file_py}"
 save_path_mat = f"{vid_root}{save_file_mat}"
 #%%
 # models
-comNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/comNet250430_222637.single_instance.n=1684"
-postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/posture250430_230225.single_instance.n=1684"
+# comNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/comNet250430_222637.single_instance.n=1684"
+# postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/posture250430_230225.single_instance.n=1684"
+comNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/250814_161111.single_instance.n=3756"
+postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/250815_002509.single_instance.n=3756"
 faceNet = "C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL/faceNet/j5-xl-041925.keras"
 # cocoNet = "C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL/faceNet/cocoNet-041725.keras"
 

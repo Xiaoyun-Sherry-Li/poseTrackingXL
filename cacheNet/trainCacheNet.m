@@ -16,17 +16,17 @@ load("Z:\Sherry\acquisition\AMB155_031025\botAnnotations_AMB155_031025_curated.m
 load("Z:\Sherry\acquisition\LVN4_040725\botAnnotations_LVN4_040725_curated.mat"));
 
 %% checking data
-% close all, 
-% clear all
+close all, 
+clear all
 % load("Z:\Sherry\acquisition\AMB155_031025\botAnnotations_AMB155_031025_curated.mat");
-% % load("Z:\Sherry\acquisition\LVN4_040725\botAnnotations_LVN4_040725_curated.mat")
-% start = 1;
-% n = 25;
-% for i = start: start + n-1
-%     subplot(5, 5, i-start+1); 
-%     imshow(preIms(:,:,i));
-%     title(sprintf('%.4f', prePreds(i)));
-% end
+% load("Z:\Sherry\acquisition\LVN4_040725\botAnnotations_LVN4_040725_curated.mat")
+start = 1;
+n = 25;
+for i = start: start + n-1
+    subplot(5, 5, i-start+1); 
+    imshow(botAnt.preIms(:,:,i));
+    title(sprintf('%.4f', botAnt.prePreds(i)));
+end
 %%
 for i=1:length(allData)
     if size(allData(i).preIms,3) == 2
