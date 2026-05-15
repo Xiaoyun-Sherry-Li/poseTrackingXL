@@ -1,11 +1,11 @@
 #%%
 import sys
-sys.path.append('C:/Users/User/Documents/GitHub/poseTrackingXL')
-sys.path.append('C:/Users/User/Documents/GitHub/poseTrackingXL/utils')
-sys.path.append('C:/Users/User/Documents/GitHub/poseTrackingXL/faceNet')
+import os
+sys.path.append(os.path.join('C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL'))
+sys.path.append(os.path.join('C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL/utils'))
+sys.path.append(os.path.join('C:/Users/xl313/OneDrive/Documents/GitHub/poseTrackingXL/faceNet'))
 import numpy as np
 import tensorflow as tf
-import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress warnings and info, show only errors
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # forcing tensorflow to use GPU
 import cv2
@@ -68,7 +68,7 @@ comNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/ILbaseCom260122_095
 # postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/XLILbase260121_184939.single_instance.n=1684"
 postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/042126_2536FramesTotal260421_194809.single_instance.n=344"
 # postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/ROS100260215_133136.single_instance.n=400" # building on an existing model
-faceNet = "C:/Users/User/Documents/GitHub/poseTrackingXL/faceNet/j5-xl-041925.keras"
+faceNet = "Z:/Sherry/poseTrackingXL/faceNet/j5-xl-041925.keras"
 
 # if running face model, otherwise set to None
 with tf.device('/GPU:0'):  # Explicitly place model on GPU # added by sherry 072725
