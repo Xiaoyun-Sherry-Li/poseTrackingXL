@@ -143,10 +143,14 @@ class posture_tracker:
                     ds_fac=4, w3d=80, crop_size=(320,320), # w3d used to be 0.25
                     nParts=15, nCOMs=3, com_body_ind=1,
                     com_model=None, posture_model=None, face_model=None,
-                    face_w3d=20, com_head_ind=0, face_crop_size=(128,128)):
+                    face_w3d=20, com_head_ind=0, face_crop_size=(128,128),
+                    return_cams=False, face_center_parts=None):
                     # cocoNet = None,
         # original face_w3d value: 0.08
         # input a list of video reader objects
+        # return_cams: if True, results include 'com_tri_cams' and
+        # 'posture_tri_cams' — the (sorted, 0-based) indices of the 3 cameras
+        # whose triangulation won for each keypoint on each frame
         self.readers = readers
         self.nCams = len(readers)
         assert self.nCams == camParams.shape[0]
@@ -165,15 +169,49 @@ class posture_tracker:
         self.face_w3d = face_w3d
         self.com_head_ind = com_head_ind
         self.face_crop_size = face_crop_size
+        self.return_cams = return_cams
+        # face_center_parts: which 3D point the faceNet head crop is centred on.
+        #   None (default)  -> best_com[com_head_ind], the coarse comNet head COM (legacy)
+        #   list of ints    -> mean of those triangulated POSTURE keypoints
+        # The faceNet training crops were made from posture keypoints
+        # (pos_center_ind = [0, 1] in faceNet/label_training_data_XL.ipynb), not
+        # from the comNet COM, so set this to match however the model you're
+        # running was trained - otherwise the crops are framed differently than
+        # anything the model saw.
+        self.face_center_parts = face_center_parts
 
+    def _predict_face(self, face_mdl, face_img_rgb):
+        '''
+        Legacy face-scoring hook: converts the RGB head crops to grayscale and
+        feeds all views at once to the joint (multi-view) sigmoid model.
+        Override this in a subclass to swap in a different face model or
+        view-combination method (see e.g. faceNet/testFaceNet_072026.ipynb for
+        a confidence-weighted consensus over a single-view RGB classifier).
+        face_img_rgb: (crop_h, crop_w, 3, n_cams) uint8
+        '''
+        if not hasattr(self, '_face_img_gray'):
+            # scratch buffer, owned by this (legacy-only) hook - allocated once,
+            # lazily, so subclasses that don't need it never pay for it
+            self._face_img_gray = np.full((1, self.face_crop_size[1], self.face_crop_size[0], self.nCams), 0,
+                                          dtype='uint8')
+        for nCam in range(self.nCams):
+            self._face_img_gray[0, :, :, nCam] = (
+                    0.1 * face_img_rgb[:, :, 0, nCam] +  # Red channel
+                    0.2 * face_img_rgb[:, :, 1, nCam] +  # Green channel
+                    0.7 * face_img_rgb[:, :, 2, nCam]  # Blue channel
+            )
+        thisPrediction = face_mdl.predict_on_batch(self._face_img_gray)  # tmp introduce batch size
+        return thisPrediction.copy()
 
     def track_video(self, start_frame=0, nFrames=1000):
         '''
         Get coarse and fine keypoint predictions
         '''
         ''' load the models '''
-        com_mdl = slp_load([self.com_model], peak_threshold=0)
-        posture_mdl = slp_load([self.posture_model], peak_threshold=0)
+        # accept either a path (load it here, as before) or an already-loaded
+        # model, so a caller can load the models *before* opening video readers
+        com_mdl = slp_load([self.com_model], peak_threshold=0) if isinstance(self.com_model, str) else self.com_model
+        posture_mdl = slp_load([self.posture_model], peak_threshold=0) if isinstance(self.posture_model, str) else self.posture_model
         face_mdl = self.face_model
 
         ''' Collect camera parameters '''
@@ -199,12 +237,12 @@ class posture_tracker:
         postureConf = []
         rawPosturePreds = []
         facePreds = []
+        comCams = []
+        postureCams = []
         # Preallocate image arrays
         ds_img = np.full((self.nCams, self.ds_size[1], self.ds_size[0], 3), 0, dtype='uint8')  # SHERRY: the last dimension used to be 1, needs to make it 3
         crop_img = np.full((self.nCams, self.crop_size[1], self.crop_size[0], 3), 0, dtype='uint8') # SHERRY: the last dimension used to be 1, need to make it 3
         face_img_rgb = np.full((self.face_crop_size[1], self.face_crop_size[0], 3, self.nCams), 0,
-                           dtype='uint8')  # note different shape w/ n=1 and channels = nCams
-        face_img_gray = np.full((1, self.face_crop_size[1], self.face_crop_size[0], self.nCams), 0,
                            dtype='uint8')  # note different shape w/ n=1 and channels = nCams
         # Preallocate results variables (each frame)
         best_com = np.full((self.nCOMs, 3), np.NaN)
@@ -213,6 +251,8 @@ class posture_tracker:
         best_posture = np.full((self.nParts, 3), np.NaN)
         posture_reproj = np.full((self.nParts), np.NaN)
         posture_conf = np.full((self.nParts), np.NaN)
+        com_cams = np.full((self.nCOMs, 3), -1, dtype=int)
+        posture_cams = np.full((self.nParts, 3), -1, dtype=int)
 
         '''Read in RGB frames'''
         stopReading = False
@@ -226,7 +266,13 @@ class posture_tracker:
                     continue # skip frames before indicated start_frame
                 flag, img = self.readers[nCam].read()
                 if img is None:
-                    print(f"Failed to read frame {nFrame} from camera {nCam}")
+                    # read failed (end of video, or a reader that was already
+                    # consumed - e.g. re-running track_video interactively without
+                    # recreating the readers). Stop cleanly instead of feeding None
+                    # to cvtColor, which crashes with an opaque !_src.empty() error.
+                    print(f"Failed to read frame {nFrame} from camera {nCam}; stopping.")
+                    stopReading = True
+                    break
                 img = cv2.cvtColor(img,
                                    cv2.COLOR_BGR2RGB)  # Sherry added this bcs cv2 image reader reads in BGR, need to convert to RGB to read in the images correctly
                 full_img.append(img) # SHERRY: used to be [:,:,0], but now it is taking all RGB channels
@@ -252,12 +298,18 @@ class posture_tracker:
             for nCom in range(self.nCOMs):
                 com_results = triangulate_confThresh_lowestErr(COM[:, nCom],
                                                             cameraMats,
-                                                            conf[:, nCom])
-                best_com[nCom], com_reproj[nCom], com_conf[nCom] = com_results
+                                                            conf[:, nCom],
+                                                            return_cams=self.return_cams)
+                if self.return_cams:
+                    best_com[nCom], com_reproj[nCom], com_conf[nCom], com_cams[nCom] = com_results
+                else:
+                    best_com[nCom], com_reproj[nCom], com_conf[nCom] = com_results
             # collect COM results
             comPred.append(best_com.copy())
             comReproj.append(com_reproj.copy())
             comConf.append(com_conf.copy())
+            if self.return_cams:
+                comCams.append(com_cams.copy())
             # get the 3D distance of the bird from each camera to determine cropping scale
             body_COM = best_com[self.com_body_ind]
             body_reproj = sba.project(np.tile(body_COM, (self.nCams, 1)), self.camParams) # get reprojected body centroid location for each camera
@@ -293,18 +345,29 @@ class posture_tracker:
             for nPart in range(self.nParts):
                 pos_results = triangulate_confThresh_lowestErr(posture_2d[:, nPart],
                                                                 cameraMats,
-                                                                conf[:, nPart])
-                best_posture[nPart], posture_reproj[nPart], posture_conf[nPart] = pos_results
+                                                                conf[:, nPart],
+                                                                return_cams=self.return_cams)
+                if self.return_cams:
+                    best_posture[nPart], posture_reproj[nPart], posture_conf[nPart], posture_cams[nPart] = pos_results
+                else:
+                    best_posture[nPart], posture_reproj[nPart], posture_conf[nPart] = pos_results
             # collect posture results
             posturePred.append(best_posture.copy())
             postureReproj.append(posture_reproj.copy())
             postureConf.append(posture_conf.copy())
+            if self.return_cams:
+                postureCams.append(posture_cams.copy())
             # full_img_sleap = np.stack(full_img, axis=0)
 
             '''faceNet: predict seed or no seed'''
             if face_mdl is not None:
                 # get the 3D distance from each camera for cropping scale
-                head_COM = best_com[self.com_head_ind]
+                if self.face_center_parts is None:
+                    head_COM = best_com[self.com_head_ind]  # coarse comNet head COM (legacy)
+                else:
+                    # mean of the triangulated posture keypoints, matching how the
+                    # faceNet training crops were centred
+                    head_COM = np.nanmean(best_posture[self.face_center_parts], axis=0)
                 head_reproj = sba.project(np.tile(head_COM, (self.nCams, 1)),
                                           self.camParams)  # get reprojected body centroid location for each camera
                 camDist = sba.rotate(np.tile(head_COM, (self.nCams, 1)),
@@ -322,19 +385,14 @@ class posture_tracker:
                                                                   thisCom,
                                                                   thisHalfWidth,
                                                                   self.face_crop_size)
-                    face_img_gray[0,:, :,nCam] = (
-                            0.1 * face_img_rgb[:, :, 0, nCam] +  # Red channel
-                            0.2 * face_img_rgb[:, :, 1, nCam] +  # Green channel
-                            0.7 * face_img_rgb[:, :, 2, nCam]  # Blue channel
-                    )
-                thisPrediction = face_mdl.predict_on_batch(face_img_gray) # tmp introduce batch size
-                facePreds.append(thisPrediction.copy())
+                thisPrediction = self._predict_face(face_mdl, face_img_rgb)
+                facePreds.append(thisPrediction)
             else:
                 facePreds.append(None)
 
 
         # the return call here executes if loop finishes naturally or is broken when reading fails
-        return {'posture_preds':np.stack(posturePred),
+        results = {'posture_preds':np.stack(posturePred),
                 'posture_rep_err':np.stack(postureReproj),
                 'posture_rawpred':np.stack(rawPosturePreds),
                 'com_preds':np.stack(comPred),
@@ -347,3 +405,8 @@ class posture_tracker:
                 # 'unseen_images':full_img_sleap,
                 # 'sleap_raw_predicted_points_scale_back': raw_posture,
                 # 'cropped_unseen_images':crop_img} # SHERRY added the sleap raw output
+        if self.return_cams:
+            # winning-triplet camera indices (sorted, 0-based into the reader/cam_ids order)
+            results['com_tri_cams'] = np.stack(comCams)          # nFrames x nCOMs x 3
+            results['posture_tri_cams'] = np.stack(postureCams)  # nFrames x nParts x 3
+        return results

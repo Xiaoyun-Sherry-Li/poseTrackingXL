@@ -5,26 +5,109 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="1980889c-76e3-4100-8d07-2262f552d8a5" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../ILmodel_3chans.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../comNet_IL_081425.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../postureNet/postureNet_IL_081425.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../train_sleap_manual.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../cacheNet/trainCacheNet.m" beforeDir="false" afterPath="$PROJECT_DIR$/../cacheNet/trainCacheNet.m" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../checkGoodBadInferredFrames.m" beforeDir="false" afterPath="$PROJECT_DIR$/../checkGoodBadInferredFrames.m" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../comNet/ComNet_CreateSLPproject_XL.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../comNet/ComNet_CreateSLPproject_XL.ipynb" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/label_training_data_foodIDNet_062526.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../postureNet/PostureNet_CreateSLPproject_XL_010825.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../postureNet/PostureNet_CreateSLPproject_XL_010825.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/createFaceDataset.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/createFaceDataset.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/label_training_data_XL.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/label_training_data_XL.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/testFaceNet.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/testFaceNet.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../process_raw_preds_XL.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../process_raw_preds_XL.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../sanityCheckInferredFrames.asv" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../sanityCheckInferredFrames.m" beforeDir="false" afterPath="$PROJECT_DIR$/../sanityCheckInferredFrames.m" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../trackPosture_slp_XL_021425.py" beforeDir="false" afterPath="$PROJECT_DIR$/../trackPosture_slp_XL_021425.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../utils/slp_utils_XL.py" beforeDir="false" afterPath="$PROJECT_DIR$/../utils/slp_utils_XL.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../trackPosture_bench_042126.py" beforeDir="false" afterPath="$PROJECT_DIR$/../trackPosture_bench_042126.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Jupyter Notebook" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;Xiaoyun-Sherry-Li&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Xiaoyun-Sherry-Li/poseTrackingXL.git&quot;,
+    &quot;accountId&quot;: &quot;1fe8f67c-11cc-4247-ab6a-993daffce334&quot;
+  }
+}</component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.5105060628535965" />
+      <entry key="MS500" value="1.8741786204103732" />
+      <entry key="S2" value="1.9669411552682279" />
+      <entry key="S5" value="1.9866429524472071" />
+      <entry key="S10" value="1.9932990246885411" />
+      <entry key="S30" value="1.9977613336757223" />
+      <entry key="S60" value="1.9988800396823045" />
+      <entry key="M2" value="1.999439862964403" />
+      <entry key="M5" value="1.9997759075240895" />
+      <entry key="M10" value="1.9998879474841615" />
+      <entry key="M15" value="1.9999252969276198" />
+      <entry key="M30" value="1.9999626477662154" />
+      <entry key="H1" value="1.9999813237087056" />
+      <entry key="H2" value="1.999990661810752" />
+      <entry key="H4" value="1.9999953308944756" />
+      <entry key="D1" value="1.9999992218142322" />
+      <entry key="W1" value="1.9999998888305675" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.2653060050795777" />
+      <entry key="MS500" value="1.7787650121046163" />
+      <entry key="S2" value="1.9397470971385986" />
+      <entry key="S5" value="1.9754741698784826" />
+      <entry key="S10" value="1.9876651649774468" />
+      <entry key="S30" value="1.9958722988964126" />
+      <entry key="S60" value="1.9979341315314507" />
+      <entry key="M2" value="1.9989665607797829" />
+      <entry key="M5" value="1.9995865030503635" />
+      <entry key="M10" value="1.9997932313095108" />
+      <entry key="M15" value="1.9998621497135682" />
+      <entry key="M30" value="1.9999310726102975" />
+      <entry key="H1" value="1.9999655357435087" />
+      <entry key="H2" value="1.9999827677313415" />
+      <entry key="H4" value="1.9999913838305674" />
+      <entry key="D1" value="1.9999985639668858" />
+      <entry key="W1" value="1.999999794852293" />
+    </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2
@@ -34,25 +117,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/xl313/OneDrive/Documents/GitHub/bird_pose_tracking/faceNet&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/Users/User/Documents/GitHub/poseTrackingXL/faceNet",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "ml.llm.AIAssistantPromptsLibrary",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-b26f3e71634d-JavaScript-PY-251.26094.141" />
-        <option value="bundled-python-sdk-9f8e2b94138c-36ea0e71a18c-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.26094.141" />
+        <option value="bundled-js-predefined-d6986cc7102b-31caf2ab9e3c-JavaScript-PY-261.25134.203" />
+        <option value="bundled-python-sdk-245168a56dbd-c2ffad84badb-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.25134.203" />
       </set>
     </attachedChunks>
   </component>
@@ -69,10 +157,26 @@
       <workItem from="1767991411309" duration="1835000" />
       <workItem from="1768253581844" duration="40000" />
       <workItem from="1768255028173" duration="4000" />
+      <workItem from="1782323563107" duration="12539000" />
+      <workItem from="1782403851878" duration="687000" />
+      <workItem from="1782404583927" duration="1558000" />
+      <workItem from="1782406163889" duration="743000" />
+      <workItem from="1782407248424" duration="2567000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="jupyter-line">
+          <url>file://$PROJECT_DIR$/label_training_data_foodIDNet_062526.ipynb</url>
+          <line>1</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

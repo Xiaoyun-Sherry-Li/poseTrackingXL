@@ -15,15 +15,15 @@ clear; close all; clc;
 
 % ── Paths ────────────────────────────────────────────────────────────────
 CODE_PATH   = 'C:\Users\User\Documents\GitHub';
-VID_PATH    = 'Z:\Sherry\acquisition\ROS108\ROS108_070126';
+VID_PATH    = 'Z:\Sherry\acquisition\ROS108\ROS108_062526';
 % VID_PATH    = 'Z:\Sherry\acquisition\ROS108\ROS108_062526';
 CAL_FILE    = 'Z:\Sherry\camera_calibration\092124_camOptArrayDA_XL.mat';
 SKEL_FILE   = 'C:\Users\User\Documents\GitHub\bird_pose_tracking\postureNet\posture_skeleton_IL.csv';
 SAVE_DIR    = 'Z:\Sherry\poseTrackingXL\training_files\Label3D\';
-SAVE_FILE   = 'ROS108_070126';
+SAVE_FILE   = 'ROS108_062526';
 
 % ── Load session data ────────────────────────────────────────────────────
-load(fullfile(VID_PATH, 'raw_pred_V4.mat'));
+load(fullfile(VID_PATH, 'raw_072226.mat'));
 % load(fullfile(VID_PATH, 'annotatedSeeds_ROS108_062526_verified.mat'));    % loads annotatedSeeds if needed
 
 addpath(genpath(CODE_PATH));
@@ -65,7 +65,7 @@ end
 % =========================================================================
 %% 2.  [optional] Sanity-check video: pick frame range and visualise
 % =========================================================================
-predIdx = 40350:40600;
+predIdx = 1000:1200;
 predVid = readVideoFrames(VID_PATH, CAM_NAMES, predIdx);
 
 % View in 3-D GUI

@@ -143,12 +143,14 @@ def triangulate_3sets(pts, cameraMats, nSelections=5, nCams=6):
 
     return best_p3d, best_err
 
-def triangulate_confThresh_lowestErr(pts, cameraMats, conf, kSelect=4):
+def triangulate_confThresh_lowestErr(pts, cameraMats, conf, kSelect=4, return_cams=False):
     """Wrapper around triangulate_single_pt. Takes in a nViewsx2 matrix of 2d pts,
     a list of 4x3 camera matrices cameraMats, and an nViews vector of confidence scores,
     selects the k highest confidence values, triangulates all combinations of 3 cameras,
     selects the triangulation with minimum reprojection error, and returns the point and
-    reprojection error"""
+    reprojection error.
+    If return_cams is True, also returns the (sorted) indices of the 3 cameras
+    whose triangulation won, as a 4th output."""
     nCams = pts.shape[0]
     if nCams != len(cameraMats):
         print('Number of points does not equal number of camera matrices')
@@ -170,6 +172,9 @@ def triangulate_confThresh_lowestErr(pts, cameraMats, conf, kSelect=4):
                     best_err = err
                     best_p3d = p3d
                     best_conf = conf[camInd].mean()
+                    best_cams = np.sort(camInd)
+    if return_cams:
+        return best_p3d, best_err, best_conf, best_cams
     return best_p3d, best_err, best_conf
 
 def triangulate_confThresh_medPair(pts, cameraMats, conf, kSelect=3):

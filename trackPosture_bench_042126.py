@@ -23,20 +23,23 @@ import pySBA
 from slp_utils_XL import posture_tracker, create_slp_project, crop_from_com
 import scipy.io
 
-#%%
+#%% parameters
 ''' UPDATE data params as appropriate'''
-nFrames = 246 * 60 * 50  # in frames at 50fps # takes 1 min total 178mins
+nFrames = 150  # in frames at 50fps # takes 1 min total 178mins
 # videos
 root_dir = "Z:/Sherry/acquisition/"
-vid_root = f"{root_dir}TRQ150_051126/"
+vid_root = f"{root_dir}ROS108/ROS108_062526/"
 # to save
-pred_date = "051526"
+pred_date = "071526"
 # video params
 start_frame = 0
 # cam params
 cam_ids = ['blue_cam', 'green_cam', 'red_cam', 'yellow_cam'] # check the input order
 im_w = 2200
 im_h = 650
+# if True, also save which 3 cameras won each triangulation
+# (0-based indices into cam_ids; add 1 when indexing in MATLAB)
+return_tri_cams = True
 # camera params
 cam_params = loadmat_sbx("Z:/Sherry/poseTrackingXL/calibration_files/all_opt_arrays/102324_negated_camParams")['camParams_negateR'] #['camParams']
 #camParamCells = loadmat_sbx("Z:/Sherry/poseTrackingXL/calibration_files/all_opt_arrays/031926_calibration_reformatted.mat")['allParams'] #['camParams']
@@ -68,7 +71,7 @@ comNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/ILbaseCom260122_095
 # postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/XLILbase260121_184939.single_instance.n=1684"
 postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/042126_2536FramesTotal260421_194809.single_instance.n=344"
 # postureNet = "Z:/Sherry/poseTrackingXL/training_files/SLP/models/ROS100260215_133136.single_instance.n=400" # building on an existing model
-faceNet = "C:/Users/User/Documents/GitHub/poseTrackingXL/faceNet/j5-xl-041925.keras"
+faceNet = "Z:/Sherry/poseTrackingXL/faceNet/j5-xl-041925.keras"
 
 # if running face model, otherwise set to None
 with tf.device('/GPU:0'):  # Explicitly place model on GPU # added by sherry 072725
@@ -85,12 +88,9 @@ for i in range(len(cam_ids)):
     cam = cam_ids[i]
     print(cam)
     camPath = f"{vid_root}{cam}.avi"
-    # define the video reader obj and settings
     api_id = cv2.CAP_FFMPEG
-    reader = cv2.VideoCapture(camPath, api_id) # 063025: sherry commented it out to debug failed to read frame in a session
-    # reader = cv2.VideoCapture(camPath)
+    reader = cv2.VideoCapture(camPath, api_id)
     if start_frame > 0:
-        ## reader.set(cv2.CAP_PROP_FRAME_COUNT, start_frame) # 063025: sherry commented it out to debug failed to read frame in a session
         reader.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
     all_readers.append(reader)
 
@@ -102,7 +102,8 @@ obj = posture_tracker(all_readers, cam_params,
                         crop_size=(320,320),
                         com_model=comNet,
                         posture_model=postureNet,
-                        face_model = face_model)
+                        face_model = face_model,
+                        return_cams=return_tri_cams)
                         # cocoNet = None)
 
 results = obj.track_video(start_frame=start_frame,
@@ -134,7 +135,11 @@ results_struct = {
     "session": vid_root,
     "nFrames": nFrames,
     "camParams": cam_params,
-    # "rawPostures": sleap_raw_predicted_points_scale_back,  # Uncomment if needed
+    "rawPostures": sleap_raw_predicted_points_scale_back,  # Uncomment if needed
 }
+if return_tri_cams:
+    # 0-based camera indices (order of cam_ids); add 1 when indexing in MATLAB
+    results_struct["com_tri_cams"] = results['com_tri_cams']
+    results_struct["posture_tri_cams"] = results['posture_tri_cams']
 # Save the struct to a .mat file
 scipy.io.savemat(save_path_mat, {"results": results_struct})

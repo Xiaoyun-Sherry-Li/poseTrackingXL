@@ -3,14 +3,24 @@ function predVid = readVideoFrames(vidPath, camNames, frameIdx)
 %
 %   predVid = readVideoFrames(vidPath, camNames, frameIdx)
 %
-%   frameIdx  – 1-based frame indices to extract
+%   frameIdx  – 1-based frame indices to extract (decode order, i.e. the
+%               same numbering OpenCV/SLEAP produce when reading the file
+%               sequentially, which is what the predictions use)
 %   predVid   – nCams×1 cell array of [H×W×3×nFrames] uint8 arrays
 %
-%   Note on CurrentTime:
-%     VideoReader.CurrentTime is 0-based (frame 1 → t = 0).
-%     readFrame returns the frame AT OR AFTER CurrentTime, so:
-%       CurrentTime = (frameIdx - 1) / frameRate   → exact 1-based frame
-%     The -1 offset is intentional and required for correct alignment.
+%   Seeking: VideoReader seeks by PRESENTATION time, and in these files the
+%   presentation timestamps are not equal to the decode index -- each AVI
+%   drops a burst of 6 frames early on, leaving a constant offset of about
+%   8 frames for the rest of the session (see buildPtsIndex for details).
+%   Seeking with CurrentTime = frameIdx/fr therefore returned frames ~8
+%   early. We look the true pts up in a per-camera table instead.
+%
+%   The +0.5 lands mid-frame: seeking to the frame START rounds below the
+%   boundary for most indices (the time is rarely exactly representable in
+%   floating point) and returns the PREVIOUS frame.
+%
+%   Index-based read(reader, k) is also wrong for these AVIs (returns frames
+%   from a different part of the file entirely).
 
     nCams   = numel(camNames);
     predVid = cell(nCams, 1);
@@ -18,13 +28,21 @@ function predVid = readVideoFrames(vidPath, camNames, frameIdx)
     for cam_idx = 1:nCams
         fprintf('Reading camera: %s\n', camNames{cam_idx});
         fn     = fullfile(vidPath, [camNames{cam_idx}, '.avi']);
+        ptsTbl = buildPtsIndex(fn);
         reader = VideoReader(fn);
         fr     = reader.FrameRate;
+
+        if max(frameIdx) > numel(ptsTbl)
+            error('readVideoFrames:indexOutOfRange', ...
+                  '%s has %d decoded frames but frame %d was requested.', ...
+                  camNames{cam_idx}, numel(ptsTbl), max(frameIdx));
+        end
+
         nFrames = numel(frameIdx);
-        vid    = zeros(reader.Height, reader.Width, 3, nFrames, 'uint8');
+        vid     = zeros(reader.Height, reader.Width, 3, nFrames, 'uint8');
 
         for f = 1:nFrames
-            reader.CurrentTime = (frameIdx(f) - 1) / fr;
+            reader.CurrentTime = (ptsTbl(frameIdx(f)) + 0.5) / fr;
             vid(:, :, :, f)    = readFrame(reader);
         end
         predVid{cam_idx} = vid;
